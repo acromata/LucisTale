@@ -86,8 +86,12 @@ protected:
 	float StanimaDrainTime;
 	UPROPERTY(EditAnywhere, Category = Movement)
 	float StanimaRefillTime;
+	UPROPERTY(EditAnywhere, Category = Movement)
+	float RefillStanimaDelay;
 
+	float CurrentRefillStanimaDelay;
 	bool bHasStanima;
+
 
 	// Interact
 	void Interact();
@@ -95,8 +99,13 @@ protected:
 	// Pickup
 	void Pickup();
 
+	// Inventory
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnItemPickup(class UItemData* DataOfItemAdded);
 	UPROPERTY(BlueprintReadOnly)
 	TArray<class UItemData*> ItemsInInventory;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int InventoryItemLimit;
 
 public:
 

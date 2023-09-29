@@ -29,6 +29,7 @@ APlayerCharacter::APlayerCharacter()
 	MaxStanima = 500.f;
 	StanimaDrainTime = 1.f;
 	StanimaRefillTime = 2.f;
+	RefillStanimaDelay = 1.f;
 }
 
 // Called when the game starts or when spawned
@@ -47,6 +48,7 @@ void APlayerCharacter::BeginPlay()
 
 	// Values
 	CurrentStanima = MaxStanima;
+	CurrentRefillStanimaDelay = RefillStanimaDelay;
 }
 
 // Called every frame
@@ -102,7 +104,7 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 // Start sprinting
 void APlayerCharacter::StartSprint()
 {
-	if (bHasStanima && !bIsRunning)
+	if (bHasStanima && !bIsRunning && !bIsJumping)
 	{
 		GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
 		bIsRunning = true;
@@ -131,8 +133,9 @@ void APlayerCharacter::Look(const FInputActionValue& Value)
 // Jump
 void APlayerCharacter::Jump()
 {
-	ACharacter::Jump();
+	StopSprint();
 	bIsJumping = true;
+	ACharacter::Jump();
 }
 
 // Refill and drain stanima, disable sprint if stanima empty
@@ -142,19 +145,23 @@ void APlayerCharacter::UpdateStanima()
 	if (bIsRunning && !bIsJumping)
 	{
 		CurrentStanima -= StanimaDrainTime;
+		CurrentRefillStanimaDelay = RefillStanimaDelay;
 	}
 
 	// Refill stanima
 	if (!bIsRunning && CurrentStanima < MaxStanima)
 	{
-		CurrentStanima += StanimaRefillTime;
+		CurrentRefillStanimaDelay--;
+		if (CurrentRefillStanimaDelay <= 0)
+		{
+			CurrentStanima += StanimaRefillTime;
+		}
 	}
 
 	// Check if you have stanima, if the player uses all their stanima, they shouldn't sprint until it is refilled
 	if (CurrentStanima <= 0)
 	{
 		bHasStanima = false;
-		StopSprint();
 	}
 	else if (CurrentStanima == MaxStanima)
 	{
@@ -170,17 +177,34 @@ void APlayerCharacter::UpdateStanima()
 
 #pragma endregion
 
-
+// Interact with objects
 void APlayerCharacter::Interact()
 {
+	// If interactable is a  pickup object
 	if (IsValid(PickupInRange))
 	{
 		Pickup();
 	}
 }
 
+// Pickup items
 void APlayerCharacter::Pickup()
 {
-	ItemsInInventory.Add(PickupInRange->GetItemData());
-	PickupInRange->Destroy();
+	// Get item data
+	class UItemData* ItemData = PickupInRange->GetItemData();
+	if (IsValid(ItemData))
+	{
+		// Add item to inventory
+		if (ItemsInInventory.Num() < InventoryItemLimit)
+		{
+			ItemsInInventory.Add(ItemData);
+			OnItemPickup(ItemData);
+			PickupInRange->Destroy();
+		}
+		else
+		{
+			// Inventory is full function here
+		}
+
+	}
 }
