@@ -7,18 +7,24 @@
 APickupActor::APickupActor()
 {
 	// Collider
-	Collider = CreateDefaultSubobject<USphereComponent>(TEXT("Collider"));
+	Collider = CreateDefaultSubobject<USphereComponent>("Collider");
 	Collider->SetupAttachment(RootComponent);
 
 	// Mesh
-	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Item Mesh"));
+	Mesh = CreateDefaultSubobject<UStaticMeshComponent>("ItemMesh");
 	Mesh->SetupAttachment(Collider);
-	Mesh->SetCollisionProfileName(FName("NoCollision"));
 }
 
 UItemData* APickupActor::GetItemData()
 {
-	return ItemData;
+	if (IsValid(ItemData))
+	{
+		return ItemData;
+	}
+	else
+	{
+		return nullptr;
+	}
 }
 
 // Called when the game starts or when spawned

@@ -28,7 +28,7 @@ protected:
 	virtual void BeginPlay() override;
 
 	// Data
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pickup", meta = (ExposeOnSpawn = "true"))
 	UItemData* ItemData;
 
 	// Check for player collision

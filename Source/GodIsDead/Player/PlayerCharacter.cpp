@@ -15,13 +15,17 @@ APlayerCharacter::APlayerCharacter()
 	PrimaryActorTick.bCanEverTick = true;
 
 	// Camera spring arm
-	CameraSpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("Spring Arm"));
+	CameraSpringArm = CreateDefaultSubobject<USpringArmComponent>("Spring Arm");
 	CameraSpringArm->SetupAttachment(RootComponent);
 	CameraSpringArm->bUsePawnControlRotation = true;
 
 	// Camera
-	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
+	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
 	Camera->SetupAttachment(CameraSpringArm);
+
+	// Sword mesh
+	SwordMesh = CreateDefaultSubobject<UStaticMeshComponent>("SwordMesh");
+	SwordMesh->SetupAttachment(GetMesh(), "RightHand");
 
 	// Movement
 	WalkSpeed = 600.f;

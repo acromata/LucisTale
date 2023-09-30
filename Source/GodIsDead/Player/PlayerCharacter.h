@@ -19,6 +19,9 @@ class GODISDEAD_API APlayerCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	class USphereComponent* PickupRange;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	class UStaticMeshComponent* SwordMesh;
+
 public:
 	// Sets default values for this character's properties
 	APlayerCharacter();
@@ -66,9 +69,9 @@ protected:
 	void Look(const FInputActionValue& Value);
 	void Jump();
 
-	UPROPERTY(EditAnywhere, Category = Movement)
+	UPROPERTY(EditAnywhere, Category = "Movement")
 	float WalkSpeed;
-	UPROPERTY(EditAnywhere, Category = Movement)
+	UPROPERTY(EditAnywhere, Category = "Movement")
 	float SprintSpeed;
 	UPROPERTY(BlueprintReadWrite)
 	bool bIsJumping;
@@ -78,15 +81,15 @@ protected:
 	// Stanima
 	void UpdateStanima();
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Movement)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
 	float MaxStanima;
-	UPROPERTY(BlueprintReadOnly, Category = Movement)
+	UPROPERTY(BlueprintReadOnly, Category = "Movement")
 	float CurrentStanima;
-	UPROPERTY(EditAnywhere, Category = Movement)
+	UPROPERTY(EditAnywhere, Category = "Movement")
 	float StanimaDrainTime;
-	UPROPERTY(EditAnywhere, Category = Movement)
+	UPROPERTY(EditAnywhere, Category = "Movement")
 	float StanimaRefillTime;
-	UPROPERTY(EditAnywhere, Category = Movement)
+	UPROPERTY(EditAnywhere, Category = "Movement")
 	float RefillStanimaDelay;
 
 	float CurrentRefillStanimaDelay;
