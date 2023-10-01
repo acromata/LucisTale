@@ -7,6 +7,7 @@
 #include "EnhancedInputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GodIsDead/Inventory/PickupActor.h"
+#include "DrawDebugHelpers.h"
 
 // Sets default values
 APlayerCharacter::APlayerCharacter()
@@ -53,6 +54,9 @@ void APlayerCharacter::BeginPlay()
 	// Values
 	CurrentStanima = MaxStanima;
 	CurrentRefillStanimaDelay = RefillStanimaDelay;
+
+	// Delagate/ Bindings
+	GetMesh()->GetAnimInstance()->OnPlayMontageNotifyBegin.AddDynamic(this, &APlayerCharacter::OnAttackCombo);
 }
 
 // Called every frame
@@ -78,6 +82,7 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInput->BindAction(SprintAction, ETriggerEvent::Completed, this, &APlayerCharacter::StopSprint);
 		
 		EnhancedInput->BindAction(InteractAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Interact);
+		EnhancedInput->BindAction(AttackAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Attack);
 	}
 }
 
@@ -212,3 +217,66 @@ void APlayerCharacter::Pickup()
 
 	}
 }
+
+#pragma region Attack
+
+// Start attack animation
+void APlayerCharacter::Attack()
+{
+	if (IsValid(AttackAnimation))
+	{
+		if (!bIsAttacking)
+		{
+			GetMesh()->GetAnimInstance()->Montage_Play(AttackAnimation);
+			bIsAttacking = true;
+			UE_LOG(LogTemp, Warning, TEXT("Valid."));
+		}
+		else
+		{
+			bIsBufferingAttack = true;
+			UE_LOG(LogTemp, Warning, TEXT("Buffering"));
+		}
+	}
+}
+
+// If not buffering, stop attack
+void APlayerCharacter::OnAttackCombo(FName NotifyName, const FBranchingPointNotifyPayload& BranchingPointPayload)
+{
+	if (NotifyName == "AttackCombo" && !bIsBufferingAttack)
+	{
+		GetMesh()->GetAnimInstance()->Montage_Stop(0.2f, AttackAnimation);
+		bIsAttacking = false;
+		bIsBufferingAttack = false;
+	}
+	else if (NotifyName == "AttackEnd")
+	{
+		bIsAttacking = false;
+		bIsBufferingAttack = false;
+	}
+}
+
+// Trace that does damage, called in Attack Animation Montage
+void APlayerCharacter::AttackTrace()
+{
+	FVector StartLocation = SwordMesh->GetSocketLocation("Start");
+	FVector EndLocation = SwordMesh->GetSocketLocation("End");
+
+	FHitResult HitResult;
+
+	FCollisionQueryParams CollisionParams;
+	CollisionParams.AddIgnoredActor(this);
+
+	// Trace
+	//bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, CollisionParams);
+
+	// Debug
+	DrawDebugLine(GetWorld(), StartLocation, EndLocation, FColor::Red, false, 1, 0, 1);
+
+	// On hit
+	if (bHit)
+	{
+		HitResult.GetActor()->Destroy();
+	}
+}
+
+#pragma endregion

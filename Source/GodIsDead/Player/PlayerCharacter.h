@@ -61,6 +61,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
 	class UInputAction* OpenInventoryAction;
 
+	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
+	class UInputAction* AttackAction;
+
 protected:
 	//Movement functions
 	void Move(const FInputActionValue& Value);
@@ -109,6 +112,18 @@ protected:
 	TArray<class UItemData*> ItemsInInventory;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	int InventoryItemLimit;
+
+	// Attacking
+	void Attack();
+	UFUNCTION()
+	void OnAttackCombo(FName NotifyName, const FBranchingPointNotifyPayload& BranchingPointPayload);
+	UFUNCTION(BlueprintCallable)
+	void AttackTrace();
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsAttacking;
+	UPROPERTY(EditAnywhere)
+	class UAnimMontage* AttackAnimation;
+	bool bIsBufferingAttack;
 
 public:
 
