@@ -82,6 +82,7 @@ protected:
 	bool bIsRunning;
 
 	// Stanima
+	UFUNCTION()
 	void UpdateStanima();
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
@@ -100,9 +101,11 @@ protected:
 
 
 	// Interact
+	UFUNCTION()
 	void Interact();
 
 	// Pickup
+	UFUNCTION()
 	void Pickup();
 
 	// Inventory
@@ -112,17 +115,24 @@ protected:
 	TArray<class UItemData*> ItemsInInventory;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	int InventoryItemLimit;
+	UPROPERTY(BlueprintReadWrite)
+	class UItemData* EquippedItemData;
 
 	// Attacking
 	void Attack();
+
 	UFUNCTION()
 	void OnAttackCombo(FName NotifyName, const FBranchingPointNotifyPayload& BranchingPointPayload);
 	UFUNCTION(BlueprintCallable)
 	void AttackTrace();
+
 	UPROPERTY(BlueprintReadOnly)
 	bool bIsAttacking;
 	UPROPERTY(EditAnywhere)
 	class UAnimMontage* AttackAnimation;
+	UPROPERTY()
+	TArray<class UHealthComponent*> ActorsHit;
+
 	bool bIsBufferingAttack;
 
 public:

@@ -8,7 +8,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GodIsDead/Inventory/PickupActor.h"
 #include "DrawDebugHelpers.h"
-
+#include "GodIsDead/Components/HealthComponent.h"
 // Sets default values
 APlayerCharacter::APlayerCharacter()
 {
@@ -223,7 +223,7 @@ void APlayerCharacter::Pickup()
 // Start attack animation
 void APlayerCharacter::Attack()
 {
-	if (IsValid(AttackAnimation))
+	if (IsValid(AttackAnimation) && IsValid(EquippedItemData) && EquippedItemData->ItemType == ItemType::Sword)
 	{
 		if (!bIsAttacking)
 		{
@@ -242,16 +242,22 @@ void APlayerCharacter::Attack()
 // If not buffering, stop attack
 void APlayerCharacter::OnAttackCombo(FName NotifyName, const FBranchingPointNotifyPayload& BranchingPointPayload)
 {
-	if (NotifyName == "AttackCombo" && !bIsBufferingAttack)
+	if (NotifyName == "NewAttackCombo")
 	{
-		GetMesh()->GetAnimInstance()->Montage_Stop(0.2f, AttackAnimation);
-		bIsAttacking = false;
+		if (!bIsBufferingAttack)
+		{
+			GetMesh()->GetAnimInstance()->Montage_Stop(0.2f, AttackAnimation);
+			bIsAttacking = false;
+		}
+
 		bIsBufferingAttack = false;
+		ActorsHit.Empty();
 	}
-	else if (NotifyName == "AttackEnd")
+	else if (NotifyName == "AttackEnd") // Reset values on attack end
 	{
 		bIsAttacking = false;
 		bIsBufferingAttack = false;
+		ActorsHit.Empty();
 	}
 }
 
@@ -267,16 +273,21 @@ void APlayerCharacter::AttackTrace()
 	CollisionParams.AddIgnoredActor(this);
 
 	// Trace
-	//bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, CollisionParams);
-
-	// Debug
-	DrawDebugLine(GetWorld(), StartLocation, EndLocation, FColor::Red, false, 1, 0, 1);
+	bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, CollisionParams);
 
 	// On hit
 	if (bHit)
 	{
-		HitResult.GetActor()->Destroy();
+		UHealthComponent* HealthComponent = HitResult.GetActor()->FindComponentByClass<UHealthComponent>();
+		if (IsValid(HealthComponent) && !ActorsHit.Contains(HealthComponent))
+		{
+			HealthComponent->SubtractHealth(EquippedItemData->ItemValue);
+			ActorsHit.Add(HealthComponent);
+		}
 	}
+
+	// Debug
+	/* DrawDebugLine(GetWorld(), StartLocation, EndLocation, FColor::Red, false, 1, 0, 1); */
 }
 
 #pragma endregion
