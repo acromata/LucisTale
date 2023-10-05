@@ -64,6 +64,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
 	class UInputAction* AttackAction;
 
+	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
+	class UInputAction* LockOnAction;
+
 protected:
 	//Movement functions
 	void Move(const FInputActionValue& Value);
@@ -135,9 +138,23 @@ protected:
 
 	bool bIsBufferingAttack;
 
+	// Lock on actor
+	void LockOnActor();
+	void RotateTowardsTargetedActor();
+
+	UPROPERTY()
+	AActor* TargetedActor;
+
+	int LockOnNum;
+
+	bool bIsLockedOn;
+
+	UPROPERTY(EditAnywhere)
+	float LockOnRange;
+
 public:
 
 	// Pickup
 	UPROPERTY(BlueprintReadWrite)
-	class APickupActor* PickupInRange;
+	TArray<class APickupActor*> PickupsInRange;
 };

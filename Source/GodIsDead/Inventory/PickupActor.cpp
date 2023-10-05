@@ -45,7 +45,7 @@ void APickupActor::BeginOverlapPlayer(UPrimitiveComponent* OverlappedComp, AActo
 		APlayerCharacter* Player = Cast<APlayerCharacter>(OtherActor);
 		if (IsValid(Player))
 		{
-			Player->PickupInRange = this;
+			Player->PickupsInRange.Add(this);
 		}
 	}
 }
@@ -56,9 +56,9 @@ void APickupActor::EndOverlapPlayer(UPrimitiveComponent* OverlappedComp, AActor*
 	if (IsValid(OtherActor))
 	{
 		APlayerCharacter* Player = Cast<APlayerCharacter>(OtherActor);
-		if (IsValid(Player) && (Player->PickupInRange == this))
+		if (IsValid(Player))
 		{
-			Player->PickupInRange = nullptr;
+			Player->PickupsInRange.Remove(this);
 		}
 	}
 }

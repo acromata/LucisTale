@@ -9,6 +9,8 @@
 #include "GodIsDead/Inventory/PickupActor.h"
 #include "DrawDebugHelpers.h"
 #include "GodIsDead/Components/HealthComponent.h"
+#include "Kismet/KismetMathLibrary.h"
+
 // Sets default values
 APlayerCharacter::APlayerCharacter()
 {
@@ -65,6 +67,8 @@ void APlayerCharacter::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	UpdateStanima();
+
+	RotateTowardsTargetedActor();
 }
 
 // Called to bind functionality to input
@@ -82,7 +86,10 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInput->BindAction(SprintAction, ETriggerEvent::Completed, this, &APlayerCharacter::StopSprint);
 		
 		EnhancedInput->BindAction(InteractAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Interact);
+
 		EnhancedInput->BindAction(AttackAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Attack);
+
+		EnhancedInput->BindAction(LockOnAction, ETriggerEvent::Triggered, this, &APlayerCharacter::LockOnActor);
 	}
 }
 
@@ -190,7 +197,7 @@ void APlayerCharacter::UpdateStanima()
 void APlayerCharacter::Interact()
 {
 	// If interactable is a  pickup object
-	if (IsValid(PickupInRange))
+	if (PickupsInRange.Num() > 0)
 	{
 		Pickup();
 	}
@@ -199,22 +206,32 @@ void APlayerCharacter::Interact()
 // Pickup items
 void APlayerCharacter::Pickup()
 {
-	// Get item data
-	class UItemData* ItemData = PickupInRange->GetItemData();
-	if (IsValid(ItemData))
-	{
-		// Add item to inventory
-		if (ItemsInInventory.Num() < InventoryItemLimit)
-		{
-			ItemsInInventory.Add(ItemData);
-			OnItemPickup(ItemData);
-			PickupInRange->Destroy();
-		}
-		else
-		{
-			// Inventory is full function here
-		}
+	// Get first pickup in array
+	class APickupActor* PickupInRange = PickupsInRange[0];
 
+	// Get item data
+	if (IsValid(PickupInRange))
+	{
+		class UItemData* ItemData = PickupInRange->GetItemData();
+
+		if (IsValid(ItemData))
+		{
+			// Add item to inventory
+			if (ItemsInInventory.Num() < InventoryItemLimit)
+			{
+				ItemsInInventory.Add(ItemData);
+				OnItemPickup(ItemData);
+
+				// Remove from array and destroy
+				PickupsInRange.Remove(PickupInRange);
+				PickupInRange->Destroy();
+			}
+			else
+			{
+				// Inventory is full function here
+			}
+
+		}
 	}
 }
 
@@ -288,6 +305,79 @@ void APlayerCharacter::AttackTrace()
 
 	// Debug
 	/* DrawDebugLine(GetWorld(), StartLocation, EndLocation, FColor::Red, false, 1, 0, 1); */
+}
+
+// Lock onto enemies
+void APlayerCharacter::LockOnActor()
+{
+	// Check for actors the camera sees
+	TArray<FHitResult> LockOnActorsHit;
+
+	// Trace location
+	FVector TraceLocation = GetActorLocation();
+
+	// Make shape for sweep
+	FCollisionShape ColShape = FCollisionShape::MakeSphere(300.f);
+
+	// Debug
+	DrawDebugSphere(GetWorld(), GetActorLocation(), ColShape.GetSphereRadius(), 22, FColor::Green, false, 1, 0, 1);
+
+	// Sweep
+	bool Hits = GetWorld()->SweepMultiByChannel(LockOnActorsHit, TraceLocation, TraceLocation, FQuat::Identity, ECC_Visibility, ColShape);
+
+	// Get actors to target
+	TArray<AActor*> ActorsToTarget;
+
+	if (Hits)
+	{
+		// Get all actors hit
+		for (const FHitResult& Hit : LockOnActorsHit)
+		{
+			UHealthComponent* Damageable = Hit.GetActor()->FindComponentByClass<UHealthComponent>();
+
+			if (IsValid(Damageable))
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Hit damageable"));
+
+				// add to array
+				ActorsToTarget.Add(Hit.GetActor());
+			}
+		}
+
+		// Lock on if not already locked on, move onto the next enemy if already locked on. When there are no more enemies, unlock
+		if (!bIsLockedOn)
+		{
+			if (ActorsToTarget.Num() > 0)
+			{
+				LockOnNum = 0;
+				TargetedActor = ActorsToTarget[0];
+				bIsLockedOn = true;
+			}
+		}
+		else
+		{
+			LockOnNum++;
+			if (ActorsToTarget.IsValidIndex(LockOnNum) && IsValid(ActorsToTarget[LockOnNum]))
+			{
+				TargetedActor = ActorsToTarget[LockOnNum];
+			}
+			else
+			{
+				bIsLockedOn = false;
+				CameraSpringArm->bInheritYaw = true;
+			}
+		}
+	}
+}
+
+void APlayerCharacter::RotateTowardsTargetedActor()
+{
+	if (bIsLockedOn && IsValid(TargetedActor))
+	{
+		FRotator NewRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargetedActor->GetActorLocation());
+
+		SetActorRotation(NewRotation);
+	}
 }
 
 #pragma endregion
