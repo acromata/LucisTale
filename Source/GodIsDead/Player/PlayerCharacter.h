@@ -65,7 +65,7 @@ protected:
 	class UInputAction* AttackAction;
 
 	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
-	class UInputAction* LockOnAction;
+	class UInputAction* TargetAction;
 
 protected:
 	//Movement functions
@@ -139,18 +139,18 @@ protected:
 	bool bIsBufferingAttack;
 
 	// Lock on actor
-	void LockOnActor();
+	void TargetActor();
 	void RotateTowardsTargetedActor();
 
 	UPROPERTY()
 	AActor* TargetedActor;
 
-	int LockOnNum;
+	int TargetNum;
 
-	bool bIsLockedOn;
+	bool bIsTargetting;
 
 	UPROPERTY(EditAnywhere)
-	float LockOnRange;
+	float TargetMaxDistance;
 
 public:
 

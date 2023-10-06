@@ -89,7 +89,7 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 		EnhancedInput->BindAction(AttackAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Attack);
 
-		EnhancedInput->BindAction(LockOnAction, ETriggerEvent::Triggered, this, &APlayerCharacter::LockOnActor);
+		EnhancedInput->BindAction(TargetAction, ETriggerEvent::Triggered, this, &APlayerCharacter::TargetActor);
 	}
 }
 
@@ -117,23 +117,6 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 	}
 }
 
-// Start sprinting
-void APlayerCharacter::StartSprint()
-{
-	if (bHasStanima && !bIsRunning && !bIsJumping)
-	{
-		GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
-		bIsRunning = true;
-	}
-}
-
-// Stop sprinting
-void APlayerCharacter::StopSprint()
-{
-	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
-	bIsRunning = false;
-}
-
 // Move 3rd person camera
 void APlayerCharacter::Look(const FInputActionValue& Value)
 {
@@ -152,6 +135,23 @@ void APlayerCharacter::Jump()
 	StopSprint();
 	bIsJumping = true;
 	ACharacter::Jump();
+}
+
+// Start sprinting
+void APlayerCharacter::StartSprint()
+{
+	if (bHasStanima && !bIsRunning && !bIsJumping)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
+		bIsRunning = true;
+	}
+}
+
+// Stop sprinting
+void APlayerCharacter::StopSprint()
+{
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+	bIsRunning = false;
 }
 
 // Refill and drain stanima, disable sprint if stanima empty
@@ -242,7 +242,7 @@ void APlayerCharacter::Attack()
 {
 	if (IsValid(AttackAnimation) && IsValid(EquippedItemData) && EquippedItemData->ItemType == ItemType::Sword)
 	{
-		if (!bIsAttacking)
+		if (!bIsAttacking && !bIsJumping)
 		{
 			GetMesh()->GetAnimInstance()->Montage_Play(AttackAnimation);
 			bIsAttacking = true;
@@ -308,22 +308,22 @@ void APlayerCharacter::AttackTrace()
 }
 
 // Lock onto enemies
-void APlayerCharacter::LockOnActor()
+void APlayerCharacter::TargetActor()
 {
 	// Check for actors the camera sees
-	TArray<FHitResult> LockOnActorsHit;
+	TArray<FHitResult> TargetActorsHit;
 
 	// Trace location
 	FVector TraceLocation = GetActorLocation();
 
 	// Make shape for sweep
-	FCollisionShape ColShape = FCollisionShape::MakeSphere(300.f);
+	FCollisionShape ColShape = FCollisionShape::MakeSphere(TargetMaxDistance);
 
 	// Debug
 	DrawDebugSphere(GetWorld(), GetActorLocation(), ColShape.GetSphereRadius(), 22, FColor::Green, false, 1, 0, 1);
 
 	// Sweep
-	bool Hits = GetWorld()->SweepMultiByChannel(LockOnActorsHit, TraceLocation, TraceLocation, FQuat::Identity, ECC_Visibility, ColShape);
+	bool Hits = GetWorld()->SweepMultiByChannel(TargetActorsHit, TraceLocation, TraceLocation, FQuat::Identity, ECC_Visibility, ColShape);
 
 	// Get actors to target
 	TArray<AActor*> ActorsToTarget;
@@ -331,7 +331,7 @@ void APlayerCharacter::LockOnActor()
 	if (Hits)
 	{
 		// Get all actors hit
-		for (const FHitResult& Hit : LockOnActorsHit)
+		for (const FHitResult& Hit : TargetActorsHit)
 		{
 			UHealthComponent* Damageable = Hit.GetActor()->FindComponentByClass<UHealthComponent>();
 
@@ -344,27 +344,26 @@ void APlayerCharacter::LockOnActor()
 			}
 		}
 
-		// Lock on if not already locked on, move onto the next enemy if already locked on. When there are no more enemies, unlock
-		if (!bIsLockedOn)
+		// Target enemies if not already targetting, move onto the next enemy if already locked on. When there are no more enemies, unlock
+		if (!bIsTargetting)
 		{
 			if (ActorsToTarget.Num() > 0)
 			{
-				LockOnNum = 0;
+				TargetNum = 0;
 				TargetedActor = ActorsToTarget[0];
-				bIsLockedOn = true;
+				bIsTargetting = true;
 			}
 		}
 		else
 		{
-			LockOnNum++;
-			if (ActorsToTarget.IsValidIndex(LockOnNum) && IsValid(ActorsToTarget[LockOnNum]))
+			TargetNum++;
+			if (ActorsToTarget.IsValidIndex(TargetNum) && IsValid(ActorsToTarget[TargetNum]))
 			{
-				TargetedActor = ActorsToTarget[LockOnNum];
+				TargetedActor = ActorsToTarget[TargetNum];
 			}
 			else
 			{
-				bIsLockedOn = false;
-				CameraSpringArm->bInheritYaw = true;
+				bIsTargetting = false;
 			}
 		}
 	}
@@ -372,11 +371,16 @@ void APlayerCharacter::LockOnActor()
 
 void APlayerCharacter::RotateTowardsTargetedActor()
 {
-	if (bIsLockedOn && IsValid(TargetedActor))
+	if (bIsTargetting && IsValid(TargetedActor))
 	{
 		FRotator NewRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargetedActor->GetActorLocation());
+		//SetActorRotation(NewRotation);
+		GetController()->SetControlRotation(NewRotation);
 
-		SetActorRotation(NewRotation);
+		if (GetDistanceTo(TargetedActor) >= TargetMaxDistance)
+		{
+			bIsTargetting = false;
+		}
 	}
 }
 
