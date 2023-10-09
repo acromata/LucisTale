@@ -102,6 +102,11 @@ protected:
 	float CurrentRefillStanimaDelay;
 	bool bHasStanima;
 
+	// Health
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health")
+	int32 MaxHealth;
+	UPROPERTY(BlueprintReadOnly, Category = "Health")
+	int32 CurrentHealth;
 
 	// Interact
 	UFUNCTION()
@@ -123,6 +128,8 @@ protected:
 
 	// Attacking
 	void Attack();
+
+	void StopAttack();
 
 	UFUNCTION()
 	void OnAttackCombo(FName NotifyName, const FBranchingPointNotifyPayload& BranchingPointPayload);
@@ -146,7 +153,6 @@ protected:
 	AActor* TargetedActor;
 
 	int TargetNum;
-
 	bool bIsTargetting;
 
 	UPROPERTY(EditAnywhere)

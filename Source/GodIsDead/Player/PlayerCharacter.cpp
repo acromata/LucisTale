@@ -132,7 +132,9 @@ void APlayerCharacter::Look(const FInputActionValue& Value)
 // Jump
 void APlayerCharacter::Jump()
 {
+
 	StopSprint();
+	StopAttack();
 	bIsJumping = true;
 	ACharacter::Jump();
 }
@@ -140,10 +142,19 @@ void APlayerCharacter::Jump()
 // Start sprinting
 void APlayerCharacter::StartSprint()
 {
-	if (bHasStanima && !bIsRunning && !bIsJumping)
+	if (bHasStanima && !bIsJumping)
 	{
 		GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
-		bIsRunning = true;
+
+		// Running is not true if stationary, include this so stanima is not drained
+		if (GetVelocity().Size() >= 0.5f)
+		{
+			bIsRunning = true;
+		}
+		else
+		{
+			bIsRunning = false;
+		}
 	}
 }
 
@@ -193,6 +204,7 @@ void APlayerCharacter::UpdateStanima()
 
 #pragma endregion
 
+#pragma region Interact
 // Interact with objects
 void APlayerCharacter::Interact()
 {
@@ -235,6 +247,8 @@ void APlayerCharacter::Pickup()
 	}
 }
 
+#pragma endregion
+
 #pragma region Attack
 
 // Start attack animation
@@ -256,6 +270,14 @@ void APlayerCharacter::Attack()
 	}
 }
 
+void APlayerCharacter::StopAttack()
+{
+	GetMesh()->GetAnimInstance()->Montage_Stop(0.2f, AttackAnimation);
+	bIsAttacking = false;
+	bIsBufferingAttack = false;
+	ActorsHit.Empty();
+}
+
 // If not buffering, stop attack
 void APlayerCharacter::OnAttackCombo(FName NotifyName, const FBranchingPointNotifyPayload& BranchingPointPayload)
 {
@@ -272,9 +294,7 @@ void APlayerCharacter::OnAttackCombo(FName NotifyName, const FBranchingPointNoti
 	}
 	else if (NotifyName == "AttackEnd") // Reset values on attack end
 	{
-		bIsAttacking = false;
-		bIsBufferingAttack = false;
-		ActorsHit.Empty();
+		StopAttack();
 	}
 }
 
@@ -307,7 +327,10 @@ void APlayerCharacter::AttackTrace()
 	/* DrawDebugLine(GetWorld(), StartLocation, EndLocation, FColor::Red, false, 1, 0, 1); */
 }
 
-// Lock onto enemies
+#pragma endregion
+
+#pragma region Target
+// Target enemies
 void APlayerCharacter::TargetActor()
 {
 	// Check for actors the camera sees
@@ -337,9 +360,7 @@ void APlayerCharacter::TargetActor()
 
 			if (IsValid(Damageable))
 			{
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Hit damageable"));
-
-				// add to array
+				// Add to array
 				ActorsToTarget.Add(Hit.GetActor());
 			}
 		}
@@ -351,6 +372,7 @@ void APlayerCharacter::TargetActor()
 			{
 				TargetNum = 0;
 				TargetedActor = ActorsToTarget[0];
+
 				bIsTargetting = true;
 			}
 		}
@@ -369,19 +391,33 @@ void APlayerCharacter::TargetActor()
 	}
 }
 
+// Face the target
 void APlayerCharacter::RotateTowardsTargetedActor()
 {
-	if (bIsTargetting && IsValid(TargetedActor))
+	if (bIsTargetting)
 	{
-		FRotator NewRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargetedActor->GetActorLocation());
-		//SetActorRotation(NewRotation);
-		GetController()->SetControlRotation(NewRotation);
+		if (IsValid(TargetedActor))
+		{
+			// Rotate towards the target
+			FRotator NewRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargetedActor->GetActorLocation());
+			NewRotation.Pitch = GetControlRotation().Pitch;
+			NewRotation.Roll = GetControlRotation().Roll;
 
-		if (GetDistanceTo(TargetedActor) >= TargetMaxDistance)
+			SetActorRotation(FRotator(0, NewRotation.Yaw, 0));
+			GetController()->SetControlRotation(NewRotation);
+
+			// If target out of range, stop targetting
+			if (GetDistanceTo(TargetedActor) >= TargetMaxDistance)
+			{
+				bIsTargetting = false;
+			}
+		}
+		else
 		{
 			bIsTargetting = false;
 		}
 	}
-}
 
 #pragma endregion
+}
+
