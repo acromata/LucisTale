@@ -17,7 +17,7 @@ class GODISDEAD_API APlayerCharacter : public ACharacter
 	class UCameraComponent* Camera;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	class USphereComponent* PickupRange;
+	class USphereComponent* TargetRange;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	class UStaticMeshComponent* SwordMesh;
@@ -147,16 +147,23 @@ protected:
 
 	// Lock on actor
 	void TargetActor();
-	void RotateTowardsTargetedActor();
+	void OnTargettingActor();
+
+	UFUNCTION()
+	void BeginOverlapTarget(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	UFUNCTION()
+	void EndOverlapTarget(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 	UPROPERTY()
-	AActor* TargetedActor;
+	AActor* TargettedActor;
+	UPROPERTY()
+	TArray<AActor*> TargetsInRange;
+	UPROPERTY(EditAnywhere)
+	float TargetMaxDistance;
 
 	int TargetNum;
 	bool bIsTargetting;
 
-	UPROPERTY(EditAnywhere)
-	float TargetMaxDistance;
 
 public:
 

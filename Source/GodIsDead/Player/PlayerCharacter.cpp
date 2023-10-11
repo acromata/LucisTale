@@ -21,6 +21,7 @@ APlayerCharacter::APlayerCharacter()
 	CameraSpringArm = CreateDefaultSubobject<USpringArmComponent>("Spring Arm");
 	CameraSpringArm->SetupAttachment(RootComponent);
 	CameraSpringArm->bUsePawnControlRotation = true;
+	CameraSpringArm->TargetArmLength = 420.f;
 
 	// Camera
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
@@ -29,6 +30,12 @@ APlayerCharacter::APlayerCharacter()
 	// Sword mesh
 	SwordMesh = CreateDefaultSubobject<UStaticMeshComponent>("SwordMesh");
 	SwordMesh->SetupAttachment(GetMesh(), "RightHand");
+
+	// Lock on target range
+	TargetRange = CreateDefaultSubobject<USphereComponent>("LockOnTargetRange");
+	TargetRange->SetupAttachment(RootComponent);
+	TargetRange->OnComponentBeginOverlap.AddDynamic(this, &APlayerCharacter::BeginOverlapTarget);
+	TargetRange->OnComponentEndOverlap.AddDynamic(this, &APlayerCharacter::EndOverlapTarget);
 
 	// Movement
 	WalkSpeed = 600.f;
@@ -68,7 +75,7 @@ void APlayerCharacter::Tick(float DeltaTime)
 
 	UpdateStanima();
 
-	RotateTowardsTargetedActor();
+	OnTargettingActor();
 }
 
 // Called to bind functionality to input
@@ -99,7 +106,7 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 {
 	FVector2D InputVector = Value.Get<FVector2D>();
 
-	if (IsValid(Controller))
+	if (IsValid(Controller) && !bIsAttacking)
 	{
 		// find out which way is forward
 		const FRotator Rotation = Controller->GetControlRotation();
@@ -333,91 +340,83 @@ void APlayerCharacter::AttackTrace()
 // Target enemies
 void APlayerCharacter::TargetActor()
 {
-	// Check for actors the camera sees
-	TArray<FHitResult> TargetActorsHit;
-
-	// Trace location
-	FVector TraceLocation = GetActorLocation();
-
-	// Make shape for sweep
-	FCollisionShape ColShape = FCollisionShape::MakeSphere(TargetMaxDistance);
-
-	// Debug
-	DrawDebugSphere(GetWorld(), GetActorLocation(), ColShape.GetSphereRadius(), 22, FColor::Green, false, 1, 0, 1);
-
-	// Sweep
-	bool Hits = GetWorld()->SweepMultiByChannel(TargetActorsHit, TraceLocation, TraceLocation, FQuat::Identity, ECC_Visibility, ColShape);
-
-	// Get actors to target
-	TArray<AActor*> ActorsToTarget;
-
-	if (Hits)
+	// Target enemies if not already targetting, move onto the next enemy if already locked on. When there are no more enemies, unlock
+	if (!bIsTargetting)
 	{
-		// Get all actors hit
-		for (const FHitResult& Hit : TargetActorsHit)
+		if (TargetsInRange.Num() > 0)
 		{
-			UHealthComponent* Damageable = Hit.GetActor()->FindComponentByClass<UHealthComponent>();
+			TargetNum = 0;
+			TargettedActor = TargetsInRange[0];
 
-			if (IsValid(Damageable))
-			{
-				// Add to array
-				ActorsToTarget.Add(Hit.GetActor());
-			}
+			bIsTargetting = true;
 		}
-
-		// Target enemies if not already targetting, move onto the next enemy if already locked on. When there are no more enemies, unlock
-		if (!bIsTargetting)
+	}
+	else
+	{
+		TargetNum++;
+		if (TargetsInRange.IsValidIndex(TargetNum) && IsValid(TargetsInRange[TargetNum]))
 		{
-			if (ActorsToTarget.Num() > 0)
-			{
-				TargetNum = 0;
-				TargetedActor = ActorsToTarget[0];
-
-				bIsTargetting = true;
-			}
+			TargettedActor = TargetsInRange[TargetNum];
 		}
 		else
 		{
-			TargetNum++;
-			if (ActorsToTarget.IsValidIndex(TargetNum) && IsValid(ActorsToTarget[TargetNum]))
-			{
-				TargetedActor = ActorsToTarget[TargetNum];
-			}
-			else
-			{
-				bIsTargetting = false;
-			}
+			bIsTargetting = false;
+			CameraSpringArm->SetRelativeLocation(FVector(0, 0, 0));
+			CameraSpringArm->TargetArmLength = 420.f;
 		}
 	}
 }
 
-// Face the target
-void APlayerCharacter::RotateTowardsTargetedActor()
+// Lock on the target
+void APlayerCharacter::OnTargettingActor()
 {
 	if (bIsTargetting)
 	{
-		if (IsValid(TargetedActor))
+		if (IsValid(TargettedActor))
 		{
-			// Rotate towards the target
-			FRotator NewRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargetedActor->GetActorLocation());
-			NewRotation.Pitch = GetControlRotation().Pitch;
-			NewRotation.Roll = GetControlRotation().Roll;
-
+			// Rotate player towards the target
+			FRotator NewRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargettedActor->GetActorLocation());
 			SetActorRotation(FRotator(0, NewRotation.Yaw, 0));
-			GetController()->SetControlRotation(NewRotation);
+
+			// Move camera spring arm to medium point of target and player
+			FVector PlayerTargetMidpoint = FMath::Lerp(GetActorLocation(), TargettedActor->GetActorLocation(), .5f);
+			CameraSpringArm->SetWorldLocation(PlayerTargetMidpoint);
+
+			// Adjust spring arm distance accordingly
+			float NewSpringArmLength = FVector::Distance(PlayerTargetMidpoint, GetActorLocation());
+			CameraSpringArm->TargetArmLength = FMath::Max(NewSpringArmLength * 2.5f, 420.f);
 
 			// If target out of range, stop targetting
-			if (GetDistanceTo(TargetedActor) >= TargetMaxDistance)
+			if (GetDistanceTo(TargettedActor) >= TargetMaxDistance)
 			{
 				bIsTargetting = false;
 			}
 		}
 		else
 		{
+			// If target is invalid, stop targetting
 			bIsTargetting = false;
 		}
 	}
 
 #pragma endregion
+}
+
+void APlayerCharacter::BeginOverlapTarget(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	UHealthComponent* TargetEnemy = OtherActor->FindComponentByClass<UHealthComponent>();
+	if(IsValid(TargetEnemy))
+	{
+		TargetsInRange.Add(OtherActor);
+	}
+}
+
+void APlayerCharacter::EndOverlapTarget(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	UHealthComponent* TargetEnemy = OtherActor->FindComponentByClass<UHealthComponent>();
+	if (IsValid(TargetEnemy))
+	{
+		TargetsInRange.Remove(OtherActor);
+	}
 }
 
