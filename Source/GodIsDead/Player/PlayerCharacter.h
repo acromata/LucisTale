@@ -67,6 +67,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
 	class UInputAction* TargetAction;
 
+	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
+	class UInputAction* HealAction;
+
 protected:
 	//Movement functions
 	void Move(const FInputActionValue& Value);
@@ -105,8 +108,21 @@ protected:
 	// Health
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health")
 	int32 MaxHealth;
-	UPROPERTY(BlueprintReadOnly, Category = "Health")
+	UPROPERTY(BlueprintReadWrite, Category = "Health")
 	int32 CurrentHealth;
+
+	// Spirit
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spirit")
+	int32 MaxSpirit;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spirit")
+	int32 CurrentSpirit;
+
+	// Heal
+	void CallHeal();
+	void Heal();
+	int32 HealSpiritNeeded;
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsChargingHeal;
 
 	// Interact
 	UFUNCTION()

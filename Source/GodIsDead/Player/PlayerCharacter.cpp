@@ -34,8 +34,6 @@ APlayerCharacter::APlayerCharacter()
 	// Lock on target range
 	TargetRange = CreateDefaultSubobject<USphereComponent>("LockOnTargetRange");
 	TargetRange->SetupAttachment(RootComponent);
-	TargetRange->OnComponentBeginOverlap.AddDynamic(this, &APlayerCharacter::BeginOverlapTarget);
-	TargetRange->OnComponentEndOverlap.AddDynamic(this, &APlayerCharacter::EndOverlapTarget);
 
 	// Movement
 	WalkSpeed = 600.f;
@@ -44,6 +42,13 @@ APlayerCharacter::APlayerCharacter()
 	StanimaDrainTime = 1.f;
 	StanimaRefillTime = 2.f;
 	RefillStanimaDelay = 1.f;
+
+	// Health
+	MaxHealth = 3;
+
+	// Spirit
+	MaxSpirit = 100;
+	HealSpiritNeeded = 20;
 }
 
 // Called when the game starts or when spawned
@@ -51,21 +56,16 @@ void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Input mapping context
-	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
-	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-		{
-			Subsystem->AddMappingContext(InputMapping, 0);
-		}
-	}
-
 	// Values
 	CurrentStanima = MaxStanima;
+	CurrentHealth = MaxHealth;
 	CurrentRefillStanimaDelay = RefillStanimaDelay;
 
 	// Delagate/ Bindings
 	GetMesh()->GetAnimInstance()->OnPlayMontageNotifyBegin.AddDynamic(this, &APlayerCharacter::OnAttackCombo);
+
+	TargetRange->OnComponentBeginOverlap.AddDynamic(this, &APlayerCharacter::BeginOverlapTarget);
+	TargetRange->OnComponentEndOverlap.AddDynamic(this, &APlayerCharacter::EndOverlapTarget);
 }
 
 // Called every frame
@@ -83,6 +83,16 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
+	// Input mapping context
+	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		{
+			Subsystem->AddMappingContext(InputMapping, 0);
+		}
+	}
+
+	// Input
 	if (UEnhancedInputComponent* EnhancedInput = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		EnhancedInput->BindAction(MoveAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Move);
@@ -97,6 +107,8 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInput->BindAction(AttackAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Attack);
 
 		EnhancedInput->BindAction(TargetAction, ETriggerEvent::Triggered, this, &APlayerCharacter::TargetActor);
+
+		EnhancedInput->BindAction(HealAction, ETriggerEvent::Triggered, this, &APlayerCharacter::CallHeal);
 	}
 }
 
@@ -211,7 +223,26 @@ void APlayerCharacter::UpdateStanima()
 
 #pragma endregion
 
+#pragma region Abilities
+void APlayerCharacter::CallHeal()
+{
+	if (CurrentSpirit >= HealSpiritNeeded && CurrentHealth < MaxHealth && !bIsChargingHeal)
+	{
+		FTimerHandle HealTimer;
+		GetWorld()->GetTimerManager().SetTimer(HealTimer, this, &APlayerCharacter::Heal, 1.f, false);
+		bIsChargingHeal = true;
+	}
+}
+
+void APlayerCharacter::Heal()
+{
+	CurrentHealth++;
+	bIsChargingHeal = false;
+}
+
+#pragma endregion
 #pragma region Interact
+
 // Interact with objects
 void APlayerCharacter::Interact()
 {
@@ -398,14 +429,12 @@ void APlayerCharacter::OnTargettingActor()
 			bIsTargetting = false;
 		}
 	}
-
-#pragma endregion
 }
 
 void APlayerCharacter::BeginOverlapTarget(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	UHealthComponent* TargetEnemy = OtherActor->FindComponentByClass<UHealthComponent>();
-	if(IsValid(TargetEnemy))
+	if (IsValid(TargetEnemy))
 	{
 		TargetsInRange.Add(OtherActor);
 	}
@@ -419,4 +448,8 @@ void APlayerCharacter::EndOverlapTarget(UPrimitiveComponent* OverlappedComp, AAc
 		TargetsInRange.Remove(OtherActor);
 	}
 }
+
+
+#pragma endregion
+
 
