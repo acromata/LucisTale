@@ -86,6 +86,7 @@ protected:
 	bool bIsJumping;
 
 	bool bIsRunning;
+	bool bCanMove;
 
 	// Stanima
 	UFUNCTION()
@@ -111,19 +112,6 @@ protected:
 	UPROPERTY(BlueprintReadWrite, Category = "Health")
 	int32 CurrentHealth;
 
-	// Spirit
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spirit")
-	int32 MaxSpirit;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spirit")
-	int32 CurrentSpirit;
-
-	// Heal
-	void CallHeal();
-	void Heal();
-	int32 HealSpiritNeeded;
-	UPROPERTY(BlueprintReadOnly)
-	bool bIsChargingHeal;
-
 	// Interact
 	UFUNCTION()
 	void Interact();
@@ -145,6 +133,7 @@ protected:
 	// Attacking
 	void Attack();
 
+	UFUNCTION(BlueprintCallable)
 	void StopAttack();
 
 	UFUNCTION()
@@ -164,6 +153,7 @@ protected:
 	// Lock on actor
 	void TargetActor();
 	void OnTargettingActor();
+	void StopTarget();
 
 	UFUNCTION()
 	void BeginOverlapTarget(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);

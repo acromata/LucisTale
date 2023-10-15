@@ -42,13 +42,10 @@ APlayerCharacter::APlayerCharacter()
 	StanimaDrainTime = 1.f;
 	StanimaRefillTime = 2.f;
 	RefillStanimaDelay = 1.f;
+	bCanMove = true;
 
 	// Health
 	MaxHealth = 3;
-
-	// Spirit
-	MaxSpirit = 100;
-	HealSpiritNeeded = 20;
 }
 
 // Called when the game starts or when spawned
@@ -107,8 +104,6 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInput->BindAction(AttackAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Attack);
 
 		EnhancedInput->BindAction(TargetAction, ETriggerEvent::Triggered, this, &APlayerCharacter::TargetActor);
-
-		EnhancedInput->BindAction(HealAction, ETriggerEvent::Triggered, this, &APlayerCharacter::CallHeal);
 	}
 }
 
@@ -118,7 +113,7 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 {
 	FVector2D InputVector = Value.Get<FVector2D>();
 
-	if (IsValid(Controller) && !bIsAttacking)
+	if (IsValid(Controller) && bCanMove)
 	{
 		// find out which way is forward
 		const FRotator Rotation = Controller->GetControlRotation();
@@ -208,6 +203,7 @@ void APlayerCharacter::UpdateStanima()
 	if (CurrentStanima <= 0)
 	{
 		bHasStanima = false;
+		StopSprint();
 	}
 	else if (CurrentStanima == MaxStanima)
 	{
@@ -224,23 +220,20 @@ void APlayerCharacter::UpdateStanima()
 #pragma endregion
 
 #pragma region Abilities
-void APlayerCharacter::CallHeal()
-{
-	if (CurrentSpirit >= HealSpiritNeeded && CurrentHealth < MaxHealth && !bIsChargingHeal)
-	{
-		FTimerHandle HealTimer;
-		GetWorld()->GetTimerManager().SetTimer(HealTimer, this, &APlayerCharacter::Heal, 1.f, false);
-		bIsChargingHeal = true;
-	}
-}
 
-void APlayerCharacter::Heal()
-{
-	CurrentHealth++;
-	bIsChargingHeal = false;
-}
+// Update spirit
+
+// Charge heal
+// Heal
+
+// Summon Blades
+// Throw Blades
+
+// Summon Root
+// Throw Root
 
 #pragma endregion
+
 #pragma region Interact
 
 // Interact with objects
@@ -298,12 +291,11 @@ void APlayerCharacter::Attack()
 		{
 			GetMesh()->GetAnimInstance()->Montage_Play(AttackAnimation);
 			bIsAttacking = true;
-			UE_LOG(LogTemp, Warning, TEXT("Valid."));
+			bCanMove = false;
 		}
 		else
 		{
 			bIsBufferingAttack = true;
-			UE_LOG(LogTemp, Warning, TEXT("Buffering"));
 		}
 	}
 }
@@ -311,8 +303,11 @@ void APlayerCharacter::Attack()
 void APlayerCharacter::StopAttack()
 {
 	GetMesh()->GetAnimInstance()->Montage_Stop(0.2f, AttackAnimation);
+
 	bIsAttacking = false;
 	bIsBufferingAttack = false;
+	bCanMove = true;
+
 	ActorsHit.Empty();
 }
 
@@ -323,12 +318,13 @@ void APlayerCharacter::OnAttackCombo(FName NotifyName, const FBranchingPointNoti
 	{
 		if (!bIsBufferingAttack)
 		{
-			GetMesh()->GetAnimInstance()->Montage_Stop(0.2f, AttackAnimation);
-			bIsAttacking = false;
+			StopAttack();
 		}
-
-		bIsBufferingAttack = false;
-		ActorsHit.Empty();
+		else
+		{
+			bIsBufferingAttack = false;
+			ActorsHit.Empty();
+		}
 	}
 	else if (NotifyName == "AttackEnd") // Reset values on attack end
 	{
@@ -391,9 +387,7 @@ void APlayerCharacter::TargetActor()
 		}
 		else
 		{
-			bIsTargetting = false;
-			CameraSpringArm->SetRelativeLocation(FVector(0, 0, 0));
-			CameraSpringArm->TargetArmLength = 420.f;
+			StopTarget();
 		}
 	}
 }
@@ -420,15 +414,22 @@ void APlayerCharacter::OnTargettingActor()
 			// If target out of range, stop targetting
 			if (GetDistanceTo(TargettedActor) >= TargetMaxDistance)
 			{
-				bIsTargetting = false;
+				StopTarget();
 			}
 		}
 		else
 		{
 			// If target is invalid, stop targetting
-			bIsTargetting = false;
+			StopTarget();
 		}
 	}
+}
+
+void APlayerCharacter::StopTarget()
+{
+	bIsTargetting = false;
+	CameraSpringArm->SetRelativeLocation(FVector(0, 0, 0));
+	CameraSpringArm->TargetArmLength = 420.f;
 }
 
 void APlayerCharacter::BeginOverlapTarget(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
