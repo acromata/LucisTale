@@ -3,7 +3,18 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
+#include "GodIsDead/Abilities/BladeActor.h"
 #include "PlayerCharacter.generated.h"
+
+UENUM(BlueprintType)
+enum EPrimaryTrigger
+{
+	None,
+	Sword,
+	Blade,
+	Root,
+	Heal
+};
 
 UCLASS()
 class GODISDEAD_API APlayerCharacter : public ACharacter
@@ -21,6 +32,9 @@ class GODISDEAD_API APlayerCharacter : public ACharacter
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	class UStaticMeshComponent* SwordMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	class USphereComponent* AbilitySpawnZone;
 
 public:
 	// Sets default values for this character's properties
@@ -70,7 +84,11 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
 	class UInputAction* HealAction;
 
+	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
+	class UInputAction* BladeAction;
+
 protected:
+
 	//Movement functions
 	void Move(const FInputActionValue& Value);
 	void StartSprint();
@@ -87,6 +105,13 @@ protected:
 
 	bool bIsRunning;
 	bool bCanMove;
+
+	// Primary Fire
+	void PrimaryFire();
+	UPROPERTY(BlueprintReadWrite)
+	TEnumAsByte<EPrimaryTrigger> PrimaryTriggerEnum;
+	EPrimaryTrigger PrimaryTrigger;
+	EPrimaryTrigger LastPrimaryValue;
 
 	// Stanima
 	UFUNCTION()
@@ -125,7 +150,7 @@ protected:
 	void OnItemPickup(class UItemData* DataOfItemAdded);
 	UPROPERTY(BlueprintReadOnly)
 	TArray<class UItemData*> ItemsInInventory;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory")
 	int InventoryItemLimit;
 	UPROPERTY(BlueprintReadWrite)
 	class UItemData* EquippedItemData;
@@ -143,7 +168,7 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly)
 	bool bIsAttacking;
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Animation")
 	class UAnimMontage* AttackAnimation;
 	UPROPERTY()
 	TArray<class UHealthComponent*> ActorsHit;
@@ -161,19 +186,32 @@ protected:
 	void EndOverlapTarget(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 	UPROPERTY()
-	AActor* TargettedActor;
-	UPROPERTY()
 	TArray<AActor*> TargetsInRange;
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Targetting")
 	float TargetMaxDistance;
 
 	int TargetNum;
+	UPROPERTY(BlueprintReadOnly)
 	bool bIsTargetting;
 
+	// Blade ability
+	void SpawnBlades();
+	void ThrowBlades();
+
+	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
+	int32 BladesToSpawn;
+	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
+	TSubclassOf<ABladeActor> BladeActor;
+	UPROPERTY(BlueprintReadOnly, Category = "Abilities|Blade")
+	TArray<ABladeActor*> BladesSpawned;
 
 public:
 
 	// Pickup
 	UPROPERTY(BlueprintReadWrite)
 	TArray<class APickupActor*> PickupsInRange;
+
+	// Target
+	UPROPERTY(BlueprintReadOnly)
+	AActor* TargettedActor;
 };

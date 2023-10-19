@@ -7,8 +7,8 @@
 UENUM(BlueprintType)
 enum ItemType
 {
-	Material,
-	Sword
+	MaterialType,
+	SwordType
 };
 
 UCLASS()

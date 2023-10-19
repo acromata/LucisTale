@@ -35,6 +35,10 @@ APlayerCharacter::APlayerCharacter()
 	TargetRange = CreateDefaultSubobject<USphereComponent>("LockOnTargetRange");
 	TargetRange->SetupAttachment(RootComponent);
 
+	// Ability spawn zone
+	AbilitySpawnZone = CreateDefaultSubobject<USphereComponent>("AbilitySpawnZone");
+	AbilitySpawnZone->SetupAttachment(RootComponent);
+
 	// Movement
 	WalkSpeed = 600.f;
 	SprintSpeed = 800.f;
@@ -46,6 +50,9 @@ APlayerCharacter::APlayerCharacter()
 
 	// Health
 	MaxHealth = 3;
+
+	// Primary trigger
+	PrimaryTrigger = EPrimaryTrigger::Sword;
 }
 
 // Called when the game starts or when spawned
@@ -83,7 +90,8 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	// Input mapping context
 	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
 	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem
+			<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
 		{
 			Subsystem->AddMappingContext(InputMapping, 0);
 		}
@@ -101,9 +109,11 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		
 		EnhancedInput->BindAction(InteractAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Interact);
 
-		EnhancedInput->BindAction(AttackAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Attack);
+		EnhancedInput->BindAction(AttackAction, ETriggerEvent::Triggered, this, &APlayerCharacter::PrimaryFire);
 
 		EnhancedInput->BindAction(TargetAction, ETriggerEvent::Triggered, this, &APlayerCharacter::TargetActor);
+
+		EnhancedInput->BindAction(BladeAction, ETriggerEvent::Triggered, this, &APlayerCharacter::SpawnBlades);
 	}
 }
 
@@ -219,21 +229,6 @@ void APlayerCharacter::UpdateStanima()
 
 #pragma endregion
 
-#pragma region Abilities
-
-// Update spirit
-
-// Charge heal
-// Heal
-
-// Summon Blades
-// Throw Blades
-
-// Summon Root
-// Throw Root
-
-#pragma endregion
-
 #pragma region Interact
 
 // Interact with objects
@@ -280,12 +275,26 @@ void APlayerCharacter::Pickup()
 
 #pragma endregion
 
+// Check what should happen when you press the attack button
+void APlayerCharacter::PrimaryFire()
+{
+	switch (PrimaryTrigger)
+	{
+		case EPrimaryTrigger::Sword:
+			Attack();
+			break;
+		case EPrimaryTrigger::Blade:
+			ThrowBlades();
+			break;
+	}
+}
+
 #pragma region Attack
 
 // Start attack animation
 void APlayerCharacter::Attack()
 {
-	if (IsValid(AttackAnimation) && IsValid(EquippedItemData) && EquippedItemData->ItemType == ItemType::Sword)
+	if (IsValid(AttackAnimation) && IsValid(EquippedItemData) && EquippedItemData->ItemType == ItemType::SwordType && PrimaryTrigger == EPrimaryTrigger::Sword)
 	{
 		if (!bIsAttacking && !bIsJumping)
 		{
@@ -451,6 +460,56 @@ void APlayerCharacter::EndOverlapTarget(UPrimitiveComponent* OverlappedComp, AAc
 }
 
 
+
+
 #pragma endregion
 
+#pragma region Abilities
 
+// Increase spirit
+
+void APlayerCharacter::SpawnBlades()
+{
+	if (PrimaryTrigger != EPrimaryTrigger::Blade)
+	{	
+		LastPrimaryValue = PrimaryTrigger;
+		PrimaryTrigger = EPrimaryTrigger::Blade;
+
+		// Spawn blades
+		for (int32 i = 0; i < BladesToSpawn; i++)
+		{
+			ABladeActor* SpawnedBlade = GetWorld()->SpawnActor<ABladeActor>(BladeActor, AbilitySpawnZone->GetRelativeTransform());
+
+			SpawnedBlade->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, "AbilitySocket");
+			
+			if (IsValid(SpawnedBlade))
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, "Spawned Blades");
+				BladesSpawned.Add(SpawnedBlade);
+			}
+		}
+	}
+}
+
+void APlayerCharacter::ThrowBlades()
+{
+	PrimaryTrigger = LastPrimaryValue;
+	
+	for (ABladeActor* Blade : BladesSpawned)
+	{
+		Blade->bIsFree = true;
+
+		if (bIsTargetting)
+		{
+			Blade->SetTarget(TargettedActor);
+		}
+	}
+}
+
+// Summon Root
+// Throw Root
+
+// Charge heal
+// Heal
+
+#pragma endregion
