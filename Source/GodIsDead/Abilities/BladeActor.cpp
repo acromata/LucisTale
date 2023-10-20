@@ -15,6 +15,9 @@ ABladeActor::ABladeActor()
 
 	BladeMesh = CreateDefaultSubobject<UStaticMeshComponent>("BladeMesh");
 	BladeMesh->SetupAttachment(SphereComponent);
+
+	BladeSpeed = 50.f;
+	LifeTime = 5.f;
 }
 
 // Called when the game starts or when spawned
@@ -24,6 +27,11 @@ void ABladeActor::BeginPlay()
 	
 }
 
+void ABladeActor::Die()
+{
+	Destroy();
+}
+
 // Called every frame
 void ABladeActor::Tick(float DeltaTime)
 {
@@ -31,24 +39,30 @@ void ABladeActor::Tick(float DeltaTime)
 
 	if (bIsFree)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, "Threw blade");
+		GEngine->AddOnScreenDebugMessage(-1, .1f, FColor::Red, "Threw blade");
 
 		// Detatch from player
 		DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 
-		// Set rotation
-		if (IsValid(TargettedActor))
-		{
-			
-		}
-
 		// Move forward
 		SetActorLocation(GetActorLocation() + (GetActorForwardVector() * BladeSpeed));
+
+		// Destroy after timer
+		FTimerHandle DieTimer;
+		GetWorld()->GetTimerManager().SetTimer(DieTimer, this, &ABladeActor::Die, LifeTime, false);
 	}
 }
 
 void ABladeActor::SetTarget(AActor* Target)
 {
-	Target = TargettedActor;
+	TargettedActor = Target;
+
+	if(IsValid(TargettedActor))
+	{
+		FRotator TargetRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargettedActor->GetActorLocation());
+		SetActorRotation(TargetRotation);
+
+		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, "B");
+	}
 }
 

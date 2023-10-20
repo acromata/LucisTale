@@ -23,10 +23,15 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	// Destroy
+	void Die();
+
 	AActor* TargettedActor;
 
-	UPROPERTY(VisibleAnywhere, Category = "BladeValues")
+	UPROPERTY(EditAnywhere, Category = "BladeValues")
 	float BladeSpeed;
+	UPROPERTY(EditAnywhere, Category = "BladeValues")
+	float LifeTime;
 
 public:	
 	// Called every frame

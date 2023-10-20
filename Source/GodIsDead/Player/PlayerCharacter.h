@@ -189,6 +189,8 @@ protected:
 	TArray<AActor*> TargetsInRange;
 	UPROPERTY(EditAnywhere, Category = "Targetting")
 	float TargetMaxDistance;
+	UPROPERTY(BlueprintReadOnly)
+	AActor* TargettedActor;
 
 	int TargetNum;
 	UPROPERTY(BlueprintReadOnly)
@@ -210,8 +212,4 @@ public:
 	// Pickup
 	UPROPERTY(BlueprintReadWrite)
 	TArray<class APickupActor*> PickupsInRange;
-
-	// Target
-	UPROPERTY(BlueprintReadOnly)
-	AActor* TargettedActor;
 };

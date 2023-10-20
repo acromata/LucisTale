@@ -479,12 +479,23 @@ void APlayerCharacter::SpawnBlades()
 		for (int32 i = 0; i < BladesToSpawn; i++)
 		{
 			ABladeActor* SpawnedBlade = GetWorld()->SpawnActor<ABladeActor>(BladeActor, AbilitySpawnZone->GetRelativeTransform());
-
-			SpawnedBlade->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, "AbilitySocket");
 			
 			if (IsValid(SpawnedBlade))
 			{
-				GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, "Spawned Blades");
+				// Attach to player
+				SpawnedBlade->AttachToComponent(GetMesh(), FAttachmentTransformRules(
+					EAttachmentRule::SnapToTarget,
+					EAttachmentRule::KeepRelative,
+					EAttachmentRule::SnapToTarget, false
+				), "AbilitySocket");
+
+				// Set random location
+				SpawnedBlade->SetActorLocation(SpawnedBlade->GetActorLocation() + FVector(FMath::FRandRange(20.f, -20.f)));
+
+				// Set rotation
+				SpawnedBlade->SetActorRotation(FRotator(0, GetActorRotation().Yaw, GetActorRotation().Pitch));
+
+				// Add to array
 				BladesSpawned.Add(SpawnedBlade);
 			}
 		}
@@ -497,12 +508,14 @@ void APlayerCharacter::ThrowBlades()
 	
 	for (ABladeActor* Blade : BladesSpawned)
 	{
-		Blade->bIsFree = true;
-
 		if (bIsTargetting)
 		{
 			Blade->SetTarget(TargettedActor);
+
+			GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, "A");
 		}
+
+		Blade->bIsFree = true;
 	}
 }
 
