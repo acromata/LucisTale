@@ -4,6 +4,7 @@
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
 #include "GodIsDead/Abilities/BladeActor.h"
+#include "GodIsDead/Abilities/RootActor.h"
 #include "PlayerCharacter.generated.h"
 
 UENUM(BlueprintType)
@@ -12,8 +13,7 @@ enum EPrimaryTrigger
 	None,
 	Sword,
 	Blade,
-	Root,
-	Heal
+	Root
 };
 
 UCLASS()
@@ -87,6 +87,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
 	class UInputAction* BladeAction;
 
+	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
+	class UInputAction* RootAction;
+
 protected:
 
 	//Movement functions
@@ -114,7 +117,6 @@ protected:
 	EPrimaryTrigger LastPrimaryValue;
 
 	// Stanima
-	UFUNCTION()
 	void UpdateStanima();
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
@@ -124,7 +126,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Movement")
 	float StanimaDrainTime;
 	UPROPERTY(EditAnywhere, Category = "Movement")
-	float StanimaRefillTime;
+	float StanimaRefillAmount;
 	UPROPERTY(EditAnywhere, Category = "Movement")
 	float RefillStanimaDelay;
 
@@ -133,9 +135,9 @@ protected:
 
 	// Health
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health")
-	int32 MaxHealth;
+	float MaxHealth;
 	UPROPERTY(BlueprintReadWrite, Category = "Health")
-	int32 CurrentHealth;
+	float CurrentHealth;
 
 	// Interact
 	UFUNCTION()
@@ -196,6 +198,21 @@ protected:
 	UPROPERTY(BlueprintReadOnly)
 	bool bIsTargetting;
 
+	// Spirit
+	void UpdateSpirit();
+	void DrainSpirit(float SpiritToDrain);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Abilities|Spirit")
+	float MaxSpirit;
+	UPROPERTY(BlueprintReadOnly, Category = "Abilities|Spirit")
+	float CurrentSpirit;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Abilities|Spirit")
+	float SpiritRefillAmount;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Abilities|Spirit")
+	float SpiritRefillDelay;
+	UPROPERTY(BlueprintReadOnly, Category = "Abilities|Spirit")
+	float CurrentSpiritRefillDelay;
+
 	// Blade ability
 	void SpawnBlades();
 	void ThrowBlades();
@@ -206,6 +223,34 @@ protected:
 	TSubclassOf<ABladeActor> BladeActor;
 	UPROPERTY(BlueprintReadOnly, Category = "Abilities|Blade")
 	TArray<ABladeActor*> BladesSpawned;
+	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
+	float BladeSpiritNeeded;
+
+	// Heal ability
+	void StartHeal();
+	void Heal();
+	void EndHeal();
+
+	UPROPERTY(EditAnywhere, Category = "Abilities|Heal")
+	float HealDelayAmount;
+	float CurrentHealDelay;
+	UPROPERTY(EditAnywhere, Category = "Abilities|Heal")
+	float HealSpiritToDrain;
+	UPROPERTY(EditAnywhere, Category = "Abilities|Heal")
+	float InitialHealSpiritToDrain;
+	UPROPERTY(EditAnywhere, Category = "Abilities|Heal")
+	float AmountToHeal;
+
+	// Root ability
+	void SpawnRoot();
+	void ThrowRoot();
+
+	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
+	TSubclassOf<ARootActor> RootActor;
+	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
+	float RootSpiritNeeded;
+
+	ARootActor* SpawnedRoot;
 
 public:
 

@@ -3,6 +3,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "GodIsDead/Player/PlayerCharacter.h"
+#include "GodIsDead/Components/HealthComponent.h"
 
 // Sets default values
 ABladeActor::ABladeActor()
@@ -25,11 +26,31 @@ void ABladeActor::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	SphereComponent->OnComponentBeginOverlap.AddDynamic(this, &ABladeActor::OnOverlapBegin);
+
+	// Disable collision
+	SetActorEnableCollision(false);
 }
 
 void ABladeActor::Die()
 {
 	Destroy();
+}
+
+void ABladeActor::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	UHealthComponent* HealthComponent = OtherActor->FindComponentByClass<UHealthComponent>();
+	if (IsValid(HealthComponent))
+	{
+		HealthComponent->SubtractHealth(Damage);
+		Die();
+	}
+
+	if (OtherActor != UGameplayStatics::GetPlayerCharacter(GetWorld(), 0) && OtherActor != this)
+	{
+		// Die
+	}
 }
 
 // Called every frame
@@ -39,7 +60,8 @@ void ABladeActor::Tick(float DeltaTime)
 
 	if (bIsFree)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, .1f, FColor::Red, "Threw blade");
+		// Enable collison
+		SetActorEnableCollision(true);
 
 		// Detatch from player
 		DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
@@ -61,8 +83,6 @@ void ABladeActor::SetTarget(AActor* Target)
 	{
 		FRotator TargetRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargettedActor->GetActorLocation());
 		SetActorRotation(TargetRotation);
-
-		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, "B");
 	}
 }
 

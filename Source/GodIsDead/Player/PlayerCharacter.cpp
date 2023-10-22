@@ -44,15 +44,20 @@ APlayerCharacter::APlayerCharacter()
 	SprintSpeed = 800.f;
 	MaxStanima = 500.f;
 	StanimaDrainTime = 1.f;
-	StanimaRefillTime = 2.f;
-	RefillStanimaDelay = 1.f;
+	StanimaRefillAmount = 2.f;
+	RefillStanimaDelay = 2.f;
 	bCanMove = true;
 
 	// Health
-	MaxHealth = 3;
+	MaxHealth = 100.f;
 
 	// Primary trigger
 	PrimaryTrigger = EPrimaryTrigger::Sword;
+
+	// Spirit
+	MaxSpirit = 100.f;
+	SpiritRefillAmount = 5.f;
+	SpiritRefillDelay = 2.f;
 }
 
 // Called when the game starts or when spawned
@@ -64,6 +69,11 @@ void APlayerCharacter::BeginPlay()
 	CurrentStanima = MaxStanima;
 	CurrentHealth = MaxHealth;
 	CurrentRefillStanimaDelay = RefillStanimaDelay;
+
+	CurrentSpirit = MaxSpirit;
+	CurrentSpiritRefillDelay = SpiritRefillDelay;
+
+	CurrentHealDelay = HealDelayAmount;
 
 	// Delagate/ Bindings
 	GetMesh()->GetAnimInstance()->OnPlayMontageNotifyBegin.AddDynamic(this, &APlayerCharacter::OnAttackCombo);
@@ -78,7 +88,7 @@ void APlayerCharacter::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	UpdateStanima();
-
+	UpdateSpirit();
 	OnTargettingActor();
 }
 
@@ -114,6 +124,11 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInput->BindAction(TargetAction, ETriggerEvent::Triggered, this, &APlayerCharacter::TargetActor);
 
 		EnhancedInput->BindAction(BladeAction, ETriggerEvent::Triggered, this, &APlayerCharacter::SpawnBlades);
+
+		EnhancedInput->BindAction(HealAction, ETriggerEvent::Triggered, this, &APlayerCharacter::StartHeal);
+		EnhancedInput->BindAction(HealAction, ETriggerEvent::Completed, this, &APlayerCharacter::EndHeal);
+		
+		EnhancedInput->BindAction(RootAction, ETriggerEvent::Triggered, this, &APlayerCharacter::SpawnRoot);
 	}
 }
 
@@ -205,7 +220,7 @@ void APlayerCharacter::UpdateStanima()
 		CurrentRefillStanimaDelay--;
 		if (CurrentRefillStanimaDelay <= 0)
 		{
-			CurrentStanima += StanimaRefillTime;
+			CurrentStanima += StanimaRefillAmount;
 		}
 	}
 
@@ -285,6 +300,9 @@ void APlayerCharacter::PrimaryFire()
 			break;
 		case EPrimaryTrigger::Blade:
 			ThrowBlades();
+			break;
+		case EPrimaryTrigger::Root:
+			ThrowRoot();
 			break;
 	}
 }
@@ -466,12 +484,35 @@ void APlayerCharacter::EndOverlapTarget(UPrimitiveComponent* OverlappedComp, AAc
 
 #pragma region Abilities
 
+
 // Increase spirit
+void APlayerCharacter::UpdateSpirit()
+{
+	if (CurrentSpirit < MaxSpirit)
+	{
+		CurrentSpiritRefillDelay--;
+		if (CurrentSpiritRefillDelay <= 0)
+		{
+			CurrentSpirit += SpiritRefillAmount;
+		}
+	}
+}
+
+// Subtract spirit
+void APlayerCharacter::DrainSpirit(float SpiritToDrain)
+{
+	CurrentSpirit -= SpiritToDrain;
+	CurrentSpiritRefillDelay = SpiritRefillDelay;
+}
 
 void APlayerCharacter::SpawnBlades()
 {
-	if (PrimaryTrigger != EPrimaryTrigger::Blade)
+	if (PrimaryTrigger != EPrimaryTrigger::Blade && PrimaryTrigger != EPrimaryTrigger::Root && CurrentSpirit >= BladeSpiritNeeded)
 	{	
+		// Subtract spirit
+		DrainSpirit(BladeSpiritNeeded);
+
+		// Set primary trigger
 		LastPrimaryValue = PrimaryTrigger;
 		PrimaryTrigger = EPrimaryTrigger::Blade;
 
@@ -511,18 +552,84 @@ void APlayerCharacter::ThrowBlades()
 		if (bIsTargetting)
 		{
 			Blade->SetTarget(TargettedActor);
-
-			GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, "A");
 		}
 
 		Blade->bIsFree = true;
 	}
 }
 
-// Summon Root
-// Throw Root
+void APlayerCharacter::StartHeal()
+{
+	if (CurrentSpirit > 0 && CurrentHealth < MaxHealth)
+	{
+		CurrentHealDelay--;
+		if (CurrentHealDelay > 0)
+		{
+			// Before you start to heal
+			DrainSpirit(InitialHealSpiritToDrain);
+		}
+		else
+		{
+			DrainSpirit(HealSpiritToDrain);
 
-// Charge heal
-// Heal
+			// Start healing
+			Heal();
+		}
+	}
+}
+
+void APlayerCharacter::Heal()
+{
+	CurrentHealth += AmountToHeal;
+}
+
+void APlayerCharacter::EndHeal()
+{
+	CurrentHealDelay = HealDelayAmount;
+}
+
+void APlayerCharacter::SpawnRoot()
+{
+	if (CurrentSpirit >= RootSpiritNeeded && PrimaryTrigger != EPrimaryTrigger::Blade && PrimaryTrigger != EPrimaryTrigger::Root)
+	{
+		// Subtract spirit
+		DrainSpirit(RootSpiritNeeded);
+
+		// Set primary trigger
+		LastPrimaryValue = PrimaryTrigger;
+		PrimaryTrigger = EPrimaryTrigger::Root;
+
+		// Spawn root
+		SpawnedRoot = GetWorld()->SpawnActor<ARootActor>(RootActor, AbilitySpawnZone->GetRelativeTransform());
+
+		if (IsValid(SpawnedRoot))
+		{
+			// Attach to player
+			SpawnedRoot->AttachToComponent(GetMesh(), FAttachmentTransformRules(
+				EAttachmentRule::SnapToTarget,
+				EAttachmentRule::KeepRelative,
+				EAttachmentRule::SnapToTarget, false
+			), "AbilitySocket");
+
+			// Set rotation
+			SpawnedRoot->SetActorRotation(FRotator(0, GetActorRotation().Yaw, GetActorRotation().Pitch));
+		}
+	}
+}
+
+void APlayerCharacter::ThrowRoot()
+{
+	if (IsValid(SpawnedRoot))
+	{
+		PrimaryTrigger = LastPrimaryValue;
+
+		if (bIsTargetting)
+		{
+			SpawnedRoot->SetTarget(TargettedActor);
+		}
+
+		SpawnedRoot->bIsFree = true;
+	}
+}
 
 #pragma endregion
