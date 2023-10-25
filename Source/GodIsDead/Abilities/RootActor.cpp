@@ -3,7 +3,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "GodIsDead/Player/PlayerCharacter.h"
-#include "GodIsDead/Components/HealthComponent.h"
+#include "GodIsDead/Enemy/EnemyBase.h"
 
 // Sets default values
 ARootActor::ARootActor()
@@ -61,9 +61,10 @@ void ARootActor::Die()
 
 void ARootActor::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	UHealthComponent* HealthComponent = OtherActor->FindComponentByClass<UHealthComponent>();
-	if (IsValid(HealthComponent))
+	AEnemyBase* Enemy = Cast<AEnemyBase>(OtherActor);
+	if (IsValid(Enemy))
 	{
+		Enemy->Root();
 		Die();
 	}
 }

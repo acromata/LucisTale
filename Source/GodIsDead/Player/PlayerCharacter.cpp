@@ -9,6 +9,7 @@
 #include "GodIsDead/Inventory/PickupActor.h"
 #include "DrawDebugHelpers.h"
 #include "GodIsDead/Components/HealthComponent.h"
+#include "GodIsDead/Enemy/EnemyBase.h"
 #include "Kismet/KismetMathLibrary.h"
 
 // Sets default values
@@ -129,7 +130,31 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInput->BindAction(HealAction, ETriggerEvent::Completed, this, &APlayerCharacter::EndHeal);
 		
 		EnhancedInput->BindAction(RootAction, ETriggerEvent::Triggered, this, &APlayerCharacter::SpawnRoot);
+
+		EnhancedInput->BindAction(ParryAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Parry);
 	}
+}
+
+// Check what should happen when you press the attack button
+void APlayerCharacter::PrimaryFire()
+{
+	switch (PrimaryTrigger)
+	{
+	case EPrimaryTrigger::Sword:
+		Attack();
+		break;
+	case EPrimaryTrigger::Blade:
+		ThrowBlades();
+		break;
+	case EPrimaryTrigger::Root:
+		ThrowRoot();
+		break;
+	}
+}
+
+void APlayerCharacter::SubtractHealth(float Amount)
+{
+	CurrentHealth -= Amount;
 }
 
 #pragma region Movement
@@ -290,23 +315,6 @@ void APlayerCharacter::Pickup()
 
 #pragma endregion
 
-// Check what should happen when you press the attack button
-void APlayerCharacter::PrimaryFire()
-{
-	switch (PrimaryTrigger)
-	{
-		case EPrimaryTrigger::Sword:
-			Attack();
-			break;
-		case EPrimaryTrigger::Blade:
-			ThrowBlades();
-			break;
-		case EPrimaryTrigger::Root:
-			ThrowRoot();
-			break;
-	}
-}
-
 #pragma region Attack
 
 // Start attack animation
@@ -461,7 +469,7 @@ void APlayerCharacter::StopTarget()
 
 void APlayerCharacter::BeginOverlapTarget(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	UHealthComponent* TargetEnemy = OtherActor->FindComponentByClass<UHealthComponent>();
+	AEnemyBase* TargetEnemy = Cast<AEnemyBase>(OtherActor);
 	if (IsValid(TargetEnemy))
 	{
 		TargetsInRange.Add(OtherActor);
@@ -470,15 +478,12 @@ void APlayerCharacter::BeginOverlapTarget(UPrimitiveComponent* OverlappedComp, A
 
 void APlayerCharacter::EndOverlapTarget(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	UHealthComponent* TargetEnemy = OtherActor->FindComponentByClass<UHealthComponent>();
+	AEnemyBase* TargetEnemy = Cast<AEnemyBase>(OtherActor);
 	if (IsValid(TargetEnemy))
 	{
 		TargetsInRange.Remove(OtherActor);
 	}
 }
-
-
-
 
 #pragma endregion
 
@@ -630,6 +635,25 @@ void APlayerCharacter::ThrowRoot()
 
 		SpawnedRoot->bIsFree = true;
 	}
+}
+
+void APlayerCharacter::Parry()
+{
+	if (!bIsParrying)
+	{
+		bIsParrying = true;
+
+		FTimerHandle ParryTimer;
+		GetWorld()->GetTimerManager().SetTimer(ParryTimer, this, &APlayerCharacter::EndParry, ParryTime);
+
+		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, "Parry start");
+	}
+}
+
+void APlayerCharacter::EndParry()
+{
+	bIsParrying = false;
+	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, "Parry end");
 }
 
 #pragma endregion

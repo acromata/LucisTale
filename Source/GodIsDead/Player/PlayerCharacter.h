@@ -90,6 +90,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
 	class UInputAction* RootAction;
 
+	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
+	class UInputAction* ParryAction;
+
 protected:
 
 	//Movement functions
@@ -175,6 +178,7 @@ protected:
 	UPROPERTY()
 	TArray<class UHealthComponent*> ActorsHit;
 
+	UPROPERTY(BlueprintReadWrite)
 	bool bIsBufferingAttack;
 
 	// Lock on actor
@@ -252,9 +256,22 @@ protected:
 
 	ARootActor* SpawnedRoot;
 
+	// Parry
+	void Parry();
+	void EndParry();
+
+	UPROPERTY(EditAnywhere, Category = "Abilities|Parry")
+	float ParryTime;
+
 public:
 
 	// Pickup
 	UPROPERTY(BlueprintReadWrite)
 	TArray<class APickupActor*> PickupsInRange;
+
+	// Heal
+	void SubtractHealth(float Amount);
+
+	// Parry
+	bool bIsParrying;
 };

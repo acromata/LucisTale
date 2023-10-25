@@ -14,6 +14,9 @@ public:
 	// Sets default values for this character's properties
 	AEnemyBase();
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	class UStaticMeshComponent* SwordMesh;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	UHealthComponent* HealthComponent;
 
@@ -28,5 +31,39 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	// Root enemy
+	void Root();
 
+protected:
+
+	// Root
+	void EndRoot();
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsRooted;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Root")
+	float RootTime;
+
+	// Attacking
+	UFUNCTION(BlueprintCallable)
+	void Attack();
+	UFUNCTION(BlueprintCallable)
+	void StopAttack();
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsAttacking;
+	bool bHasDamagedPlayer;
+
+	// Damage
+	UPROPERTY(EditAnywhere, Category = "Values")
+	float Damage;
+
+	// Stun
+	void Stun();
+	void EndStun();
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsStunned;
+	UPROPERTY(EditAnywhere, Category = "Values")
+	float StunTime;
 };
