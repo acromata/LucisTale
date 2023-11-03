@@ -66,4 +66,7 @@ protected:
 	bool bIsStunned;
 	UPROPERTY(EditAnywhere, Category = "Values")
 	float StunTime;
+	UPROPERTY(EditAnywhere, Category = "SFX")
+	USoundBase* StunSound;
+
 };

@@ -4,7 +4,6 @@
 #include "GameFramework/Actor.h"
 #include "ItemData.h"
 #include "PickupActor.generated.h"
-
 UCLASS()
 class GODISDEAD_API APickupActor : public AActor
 {
@@ -21,15 +20,13 @@ public:
 	// Sets default values for this actor's properties
 	APickupActor();
 
-	UItemData* GetItemData();
+	// Data
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pickup", meta = (ExposeOnSpawn = "true"))
+	UItemData* ItemData;
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
-	// Data
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pickup", meta = (ExposeOnSpawn = "true"))
-	UItemData* ItemData;
 
 	// Check for player collision
 	UFUNCTION()

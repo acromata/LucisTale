@@ -153,10 +153,11 @@ protected:
 	// Inventory
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnItemPickup(class UItemData* DataOfItemAdded);
+
 	UPROPERTY(BlueprintReadOnly)
 	TArray<class UItemData*> ItemsInInventory;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory")
-	int InventoryItemLimit;
+	int32 InventoryItemLimit;
 	UPROPERTY(BlueprintReadWrite)
 	class UItemData* EquippedItemData;
 
@@ -165,9 +166,8 @@ protected:
 
 	UFUNCTION(BlueprintCallable)
 	void StopAttack();
-
-	UFUNCTION()
-	void OnAttackCombo(FName NotifyName, const FBranchingPointNotifyPayload& BranchingPointPayload);
+	UFUNCTION(BlueprintCallable)
+	void OnAttackCombo();
 	UFUNCTION(BlueprintCallable)
 	void AttackTrace();
 
@@ -178,7 +178,6 @@ protected:
 	UPROPERTY()
 	TArray<class UHealthComponent*> ActorsHit;
 
-	UPROPERTY(BlueprintReadWrite)
 	bool bIsBufferingAttack;
 
 	// Lock on actor
@@ -197,10 +196,10 @@ protected:
 	float TargetMaxDistance;
 	UPROPERTY(BlueprintReadOnly)
 	AActor* TargettedActor;
-
-	int TargetNum;
 	UPROPERTY(BlueprintReadOnly)
 	bool bIsTargetting;
+
+	int32 TargetNum;
 
 	// Spirit
 	void UpdateSpirit();
@@ -262,6 +261,8 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Abilities|Parry")
 	float ParryTime;
+	UPROPERTY(EditAnywhere, Category = "Animation")
+	class UAnimMontage* ParryAnimation;
 
 public:
 

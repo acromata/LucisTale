@@ -77,12 +77,14 @@ void ABladeActor::Tick(float DeltaTime)
 
 void ABladeActor::SetTarget(AActor* Target)
 {
-	TargettedActor = Target;
-
-	if(IsValid(TargettedActor))
+	if (IsValid(Target))
 	{
-		FRotator TargetRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargettedActor->GetActorLocation());
-		SetActorRotation(TargetRotation);
+		TargettedActor = Target;
+		if (IsValid(TargettedActor))
+		{
+			FRotator TargetRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargettedActor->GetActorLocation());
+			SetActorRotation(TargetRotation);
+		}
 	}
 }
 

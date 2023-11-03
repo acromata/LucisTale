@@ -22,8 +22,14 @@ public:
 
 protected:
 
+	// Begin play
+	virtual void BeginPlay() override;
+
+	// Death
 	void Die();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 Health;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int32 MaxHealth;
+	UPROPERTY(BlueprintReadOnly)
+	int32 CurrentHealth;
 };

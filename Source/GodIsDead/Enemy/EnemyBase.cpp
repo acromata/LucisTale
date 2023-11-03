@@ -1,5 +1,6 @@
 #include "GodIsDead/Enemy/EnemyBase.h"
 #include "Components/CapsuleComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "GodIsDead/Player/PlayerCharacter.h"
 
 // Sets default values
@@ -42,23 +43,6 @@ void AEnemyBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 
 }
 
-void AEnemyBase::Root()
-{
-	FTimerHandle RootTimer;
-	
-	if (!bIsRooted)
-	{
-		bIsRooted = true;
-
-		GetWorld()->GetTimerManager().SetTimer(RootTimer, this, &AEnemyBase::EndRoot, RootTime, false);
-	}
-}
-
-void AEnemyBase::EndRoot()
-{
-	bIsRooted = false;
-}
-
 
 // Trace that does damage, called in Attack Animation Montage
 void AEnemyBase::Attack()
@@ -81,26 +65,21 @@ void AEnemyBase::Attack()
 
 		if (IsValid(Player))
 		{
-			if (Player->bIsParrying)
+			if (!bHasDamagedPlayer)
 			{
-				Stun();
-				GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, "stun call");
+				if (Player->bIsParrying)
+				{
+					Stun();
+					bHasDamagedPlayer = true;
+				}
+				else
+				{
+					Player->SubtractHealth(Damage);
+					bHasDamagedPlayer = true;
+				}
 			}
-			else if (!bHasDamagedPlayer)
-			{
-				Player->SubtractHealth(Damage);
-				bHasDamagedPlayer = true;
-				GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, "no stun");
-			}
-		}
-		else
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, "no player");
 		}
 	}
-
-	// Debug
-	 DrawDebugLine(GetWorld(), StartLocation, EndLocation, FColor::Red, false, 1, 0, 1); 
 }
 
 void AEnemyBase::StopAttack()
@@ -110,20 +89,40 @@ void AEnemyBase::StopAttack()
 
 void AEnemyBase::Stun()
 {
-	FTimerHandle StunTimer;
-
 	if (!bIsStunned)
 	{
+		// Stun
 		bIsStunned = true;
 
-		GetWorld()->GetTimerManager().SetTimer(StunTimer, this, &AEnemyBase::EndStun, StunTime, false);
+		// Play SFX
+		UGameplayStatics::PlaySound2D(GetWorld(), StunSound);
 
-		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, "stun");
+		// Unstun
+		FTimerHandle StunTimer;
+		GetWorld()->GetTimerManager().SetTimer(StunTimer, this, &AEnemyBase::EndStun, StunTime, false);
 	}
 }
 
 void AEnemyBase::EndStun()
 {
 	bIsStunned = false;
+	bHasDamagedPlayer = false;
+}
+
+void AEnemyBase::Root()
+{
+	FTimerHandle RootTimer;
+
+	if (!bIsRooted)
+	{
+		bIsRooted = true;
+
+		GetWorld()->GetTimerManager().SetTimer(RootTimer, this, &AEnemyBase::EndRoot, RootTime, false);
+	}
+}
+
+void AEnemyBase::EndRoot()
+{
+	bIsRooted = false;
 }
 

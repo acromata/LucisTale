@@ -5,7 +5,7 @@
 #include "ItemData.generated.h"
 
 UENUM(BlueprintType)
-enum ItemType
+enum EItemType
 {
 	MaterialType,
 	SwordType
@@ -34,5 +34,5 @@ public:
 	class USceneCaptureComponent2D* ItemScreenshot;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TEnumAsByte<ItemType> ItemType;
+	TEnumAsByte<EItemType> ItemType;
 };

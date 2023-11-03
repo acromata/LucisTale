@@ -76,9 +76,7 @@ void APlayerCharacter::BeginPlay()
 
 	CurrentHealDelay = HealDelayAmount;
 
-	// Delagate/ Bindings
-	GetMesh()->GetAnimInstance()->OnPlayMontageNotifyBegin.AddDynamic(this, &APlayerCharacter::OnAttackCombo);
-
+	// Overlaps
 	TargetRange->OnComponentBeginOverlap.AddDynamic(this, &APlayerCharacter::BeginOverlapTarget);
 	TargetRange->OnComponentEndOverlap.AddDynamic(this, &APlayerCharacter::EndOverlapTarget);
 }
@@ -290,7 +288,7 @@ void APlayerCharacter::Pickup()
 	// Get item data
 	if (IsValid(PickupInRange))
 	{
-		class UItemData* ItemData = PickupInRange->GetItemData();
+		class UItemData* ItemData = PickupInRange->ItemData;
 
 		if (IsValid(ItemData))
 		{
@@ -320,7 +318,7 @@ void APlayerCharacter::Pickup()
 // Start attack animation
 void APlayerCharacter::Attack()
 {
-	if (IsValid(AttackAnimation) && IsValid(EquippedItemData) && EquippedItemData->ItemType == ItemType::SwordType && PrimaryTrigger == EPrimaryTrigger::Sword)
+	if (IsValid(AttackAnimation) && IsValid(EquippedItemData) && EquippedItemData->ItemType == EItemType::SwordType && PrimaryTrigger == EPrimaryTrigger::Sword)
 	{
 		if (!bIsAttacking && !bIsJumping)
 		{
@@ -332,38 +330,6 @@ void APlayerCharacter::Attack()
 		{
 			bIsBufferingAttack = true;
 		}
-	}
-}
-
-void APlayerCharacter::StopAttack()
-{
-	GetMesh()->GetAnimInstance()->Montage_Stop(0.2f, AttackAnimation);
-
-	bIsAttacking = false;
-	bIsBufferingAttack = false;
-	bCanMove = true;
-
-	ActorsHit.Empty();
-}
-
-// If not buffering, stop attack
-void APlayerCharacter::OnAttackCombo(FName NotifyName, const FBranchingPointNotifyPayload& BranchingPointPayload)
-{
-	if (NotifyName == "NewAttackCombo")
-	{
-		if (!bIsBufferingAttack)
-		{
-			StopAttack();
-		}
-		else
-		{
-			bIsBufferingAttack = false;
-			ActorsHit.Empty();
-		}
-	}
-	else if (NotifyName == "AttackEnd") // Reset values on attack end
-	{
-		StopAttack();
 	}
 }
 
@@ -396,9 +362,34 @@ void APlayerCharacter::AttackTrace()
 	/* DrawDebugLine(GetWorld(), StartLocation, EndLocation, FColor::Red, false, 1, 0, 1); */
 }
 
+void APlayerCharacter::StopAttack()
+{
+	GetMesh()->GetAnimInstance()->Montage_Stop(0.2f, AttackAnimation);
+
+	bIsAttacking = false;
+	bIsBufferingAttack = false;
+	bCanMove = true;
+
+	ActorsHit.Empty();
+}
+
+void APlayerCharacter::OnAttackCombo()
+{
+	if (!bIsBufferingAttack)
+	{
+		StopAttack();
+	}
+	else
+	{
+		bIsBufferingAttack = false;
+		ActorsHit.Empty();
+	}
+}
+
 #pragma endregion
 
 #pragma region Target
+
 // Target enemies
 void APlayerCharacter::TargetActor()
 {
@@ -488,7 +479,6 @@ void APlayerCharacter::EndOverlapTarget(UPrimitiveComponent* OverlappedComp, AAc
 #pragma endregion
 
 #pragma region Abilities
-
 
 // Increase spirit
 void APlayerCharacter::UpdateSpirit()
@@ -639,21 +629,23 @@ void APlayerCharacter::ThrowRoot()
 
 void APlayerCharacter::Parry()
 {
-	if (!bIsParrying)
+	if (!bIsParrying && !bIsAttacking && !bIsJumping)
 	{
 		bIsParrying = true;
+		bCanMove = false;
+
+		// Play anim
+		GetMesh()->GetAnimInstance()->Montage_Play(ParryAnimation);
 
 		FTimerHandle ParryTimer;
 		GetWorld()->GetTimerManager().SetTimer(ParryTimer, this, &APlayerCharacter::EndParry, ParryTime);
-
-		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, "Parry start");
 	}
 }
 
 void APlayerCharacter::EndParry()
 {
 	bIsParrying = false;
-	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, "Parry end");
+	bCanMove = true;
 }
 
 #pragma endregion

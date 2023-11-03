@@ -4,18 +4,24 @@
 // Sets default values for this component's properties
 UHealthComponent::UHealthComponent()
 {
-	Health = 1;
+	MaxHealth = 3;
 }
 
 void UHealthComponent::SubtractHealth(int HealthToSubtract)
 {
+	CurrentHealth -= HealthToSubtract;
 
-	Health -= HealthToSubtract;
-
-	if (Health <= 0)
+	if (CurrentHealth <= 0)
 	{
 		Die();
 	}
+}
+
+void UHealthComponent::BeginPlay()
+{
+	Super::BeginPlay();
+
+	CurrentHealth = MaxHealth;
 }
 
 void UHealthComponent::Die()
@@ -32,4 +38,3 @@ void UHealthComponent::Die()
 		GetOwner()->Destroy();
 	}
 }
-

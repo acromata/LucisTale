@@ -15,18 +15,6 @@ APickupActor::APickupActor()
 	Mesh->SetupAttachment(Collider);
 }
 
-UItemData* APickupActor::GetItemData()
-{
-	if (IsValid(ItemData))
-	{
-		return ItemData;
-	}
-	else
-	{
-		return nullptr;
-	}
-}
-
 // Called when the game starts or when spawned
 void APickupActor::BeginPlay()
 {
