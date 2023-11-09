@@ -8,7 +8,8 @@ public class GodIsDead : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore",
+		"EnhancedInput", "HeadMountedDisplay", "AIModule",  "GameplayCameras"});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 
@@ -18,6 +19,7 @@ public class GodIsDead : ModuleRules
 		// Uncomment if you are using online features
 		// PrivateDependencyModuleNames.Add("OnlineSubsystem");
 
-		// To include OnlineSubsystemSteam, add it to the plugins section in your uproject file with the Enabled attribute set to true
+		// To include OnlineSubsystemSteam, add it to the plugins
+		// section in your uproject file with the Enabled attribute set to true
 	}
 }

@@ -3,22 +3,37 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "GodIsDead/Components/HealthComponent.h"
+#include "Perception/PawnSensingComponent.h"
 #include "EnemyBase.generated.h"
+
+
+UENUM(BlueprintType)
+enum class EEnemyState
+{
+	EnemyIdle,
+	EnemyChase,
+	EnemyAttack,
+	EnemyStun
+};
 
 UCLASS()
 class GODISDEAD_API AEnemyBase : public ACharacter
 {
 	GENERATED_BODY()
 
+	// Components
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	class UStaticMeshComponent* WeaponMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	UHealthComponent* HealthComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	UPawnSensingComponent* PawnSensing;
+
 public:
 	// Sets default values for this character's properties
 	AEnemyBase();
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-	class UStaticMeshComponent* SwordMesh;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
-	UHealthComponent* HealthComponent;
 
 protected:
 	// Called when the game starts or when spawned
@@ -28,13 +43,56 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
-	// Root enemy
-	void Root();
-
 protected:
+
+
+	// Pawn Sensing
+	UFUNCTION()
+	void OnSeePawn(APawn* Pawn);
+	UFUNCTION()
+	void OnHearNoise(APawn* NoiseInstigator, const FVector& Location, float Volume);
+
+	bool bCanSeePlayer;
+
+	// States
+	void CheckState();
+	void SetState(EEnemyState NewState);
+	EEnemyState ActiveState;
+
+	void StateIdle();
+	void StateChase();
+	void StateAttack();
+	void StateStun();
+
+	int LastStumbleIndex;
+
+	bool bIsStumbling;
+
+	// Attacking
+	UFUNCTION(BlueprintCallable)
+	void Attack();
+	UFUNCTION(BlueprintCallable)
+	void StopAttack();
+
+	UPROPERTY(EditAnywhere, Category = "Attack")
+	float Damage;
+	UPROPERTY(EditAnywhere, Category = "Attack")
+	float AttackingRange;
+	UPROPERTY(EditAnywhere, Category = "Attack")
+	UAnimMontage* AttackAnimation;
+
+	AActor* Target;
+
+	// Stun
+	void Stun();
+	void EndStun();
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsStunned;
+	UPROPERTY(EditAnywhere, Category = "Stun")
+	float StunTime;
+	UPROPERTY(EditAnywhere, Category = "SFX")
+	USoundBase* StunSound;
 
 	// Root
 	void EndRoot();
@@ -44,29 +102,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Root")
 	float RootTime;
 
-	// Attacking
-	UFUNCTION(BlueprintCallable)
-	void Attack();
-	UFUNCTION(BlueprintCallable)
-	void StopAttack();
-
 	UPROPERTY(BlueprintReadOnly)
 	bool bIsAttacking;
 	bool bHasDamagedPlayer;
 
-	// Damage
-	UPROPERTY(EditAnywhere, Category = "Values")
-	float Damage;
+public:
 
-	// Stun
-	void Stun();
-	void EndStun();
-
-	UPROPERTY(BlueprintReadOnly)
-	bool bIsStunned;
-	UPROPERTY(EditAnywhere, Category = "Values")
-	float StunTime;
-	UPROPERTY(EditAnywhere, Category = "SFX")
-	USoundBase* StunSound;
+	// Root enemy
+	void Root();
 
 };
