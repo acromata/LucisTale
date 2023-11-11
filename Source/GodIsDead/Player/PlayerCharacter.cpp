@@ -59,6 +59,10 @@ APlayerCharacter::APlayerCharacter()
 	MaxSpirit = 100.f;
 	SpiritRefillAmount = 5.f;
 	SpiritRefillDelay = 2.f;
+
+	// Blade
+	AimingMoveSpeed = 450.f;
+	AimingFOV = 70.f;
 }
 
 // Called when the game starts or when spawned
@@ -118,7 +122,9 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		
 		EnhancedInput->BindAction(InteractAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Interact);
 
-		EnhancedInput->BindAction(AttackAction, ETriggerEvent::Triggered, this, &APlayerCharacter::PrimaryFire);
+		EnhancedInput->BindAction(PrimaryAction, ETriggerEvent::Triggered, this, &APlayerCharacter::PrimaryButton);
+		EnhancedInput->BindAction(SecondaryAction, ETriggerEvent::Triggered, this, &APlayerCharacter::SecondaryButton);
+		EnhancedInput->BindAction(SecondaryAction, ETriggerEvent::Completed, this, &APlayerCharacter::SecondaryButtonCompleted);
 
 		EnhancedInput->BindAction(TargetAction, ETriggerEvent::Triggered, this, &APlayerCharacter::TargetActor);
 
@@ -134,7 +140,7 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 }
 
 // Check what should happen when you press the attack button
-void APlayerCharacter::PrimaryFire()
+void APlayerCharacter::PrimaryButton()
 {
 	switch (PrimaryTrigger)
 	{
@@ -148,6 +154,20 @@ void APlayerCharacter::PrimaryFire()
 		ThrowRoot();
 		break;
 	}
+}
+
+void APlayerCharacter::SecondaryButton()
+{
+	// ADS
+	if (PrimaryTrigger == EPrimaryTrigger::Blade)
+	{
+		StartAim();
+	}
+}
+
+void APlayerCharacter::SecondaryButtonCompleted()
+{
+	StopAim();
 }
 
 void APlayerCharacter::SubtractHealth(float Amount)
@@ -540,17 +560,43 @@ void APlayerCharacter::SpawnBlades()
 
 void APlayerCharacter::ThrowBlades()
 {
-	PrimaryTrigger = LastPrimaryValue;
-	
-	for (ABladeActor* Blade : BladesSpawned)
-	{
-		if (bIsTargetting)
-		{
-			Blade->SetTarget(TargettedActor);
-		}
+	ABladeActor* Blade = BladesSpawned.Last();
 
-		Blade->bIsFree = true;
+	if (IsValid(Blade))
+	{
+		/*if (bIsTargetting)
+		{
+			Blade->FaceTarget(TargettedActor);
+		}*/
+
+		// Set blade rotation
+		Blade->SetRotation(Camera->GetComponentRotation());
+
+		// Throw the blade
+		Blade->ThrowBlade();
+
+		// Remove blade from array
+		BladesSpawned.Remove(Blade);
+
+		// No more blades to throw
+		if (BladesSpawned.Num() <= 0)
+		{
+			PrimaryTrigger = LastPrimaryValue;
+			StopAim();
+		}
 	}
+}
+
+void APlayerCharacter::StartAim()
+{
+	Camera->FieldOfView = AimingFOV;
+	GetCharacterMovement()->MaxWalkSpeed = AimingMoveSpeed;
+}
+
+void APlayerCharacter::StopAim()
+{
+	Camera->FieldOfView = 90.f;
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 }
 
 void APlayerCharacter::StartHeal()

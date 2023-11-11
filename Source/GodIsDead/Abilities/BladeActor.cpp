@@ -66,6 +66,9 @@ void ABladeActor::Tick(float DeltaTime)
 		// Detatch from player
 		DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 
+		// Set rotation to 0
+		SetActorRotation(BladeRotation);
+
 		// Move forward
 		SetActorLocation(GetActorLocation() + (GetActorForwardVector() * BladeSpeed));
 
@@ -75,7 +78,7 @@ void ABladeActor::Tick(float DeltaTime)
 	}
 }
 
-void ABladeActor::SetTarget(AActor* Target)
+void ABladeActor::FaceTarget(AActor* Target)
 {
 	if (IsValid(Target))
 	{
@@ -86,5 +89,16 @@ void ABladeActor::SetTarget(AActor* Target)
 			SetActorRotation(TargetRotation);
 		}
 	}
+}
+
+void ABladeActor::SetRotation(FRotator Rotation)
+{
+	BladeRotation = Rotation;
+	BladeRotation.Roll = 0;
+}
+
+void ABladeActor::ThrowBlade()
+{
+	bIsFree = true;
 }
 

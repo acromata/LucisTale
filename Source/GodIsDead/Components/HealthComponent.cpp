@@ -1,5 +1,6 @@
 #include "GodIsDead/Components/HealthComponent.h"
 #include "GameFramework/Character.h"
+#include "GodIsDead/Enemy/EnemyBase.h"
 
 // Sets default values for this component's properties
 UHealthComponent::UHealthComponent()
@@ -26,7 +27,7 @@ void UHealthComponent::BeginPlay()
 
 void UHealthComponent::Die()
 {
-	class ACharacter* EnemyCharacter = Cast<ACharacter>(GetOwner());
+	class AEnemyBase* EnemyCharacter = Cast<AEnemyBase>(GetOwner());
 	if (IsValid(DeathAnimation) && IsValid(EnemyCharacter))
 	{
 		// Play animation

@@ -58,6 +58,12 @@ protected:
 
 	// Input Actions
 	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
+	class UInputAction* PrimaryAction;
+
+	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
+	class UInputAction* SecondaryAction;
+
+	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
 	class UInputAction* MoveAction;
 
 	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
@@ -74,9 +80,6 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
 	class UInputAction* OpenInventoryAction;
-
-	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
-	class UInputAction* AttackAction;
 
 	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
 	class UInputAction* TargetAction;
@@ -112,10 +115,10 @@ protected:
 	bool bIsRunning;
 	bool bCanMove;
 
-	// Primary Fire
-	void PrimaryFire();
-	UPROPERTY(BlueprintReadWrite)
-	TEnumAsByte<EPrimaryTrigger> PrimaryTriggerEnum;
+	// Primary & Secondary Actions
+	void PrimaryButton();
+	void SecondaryButton();
+	void SecondaryButtonCompleted();
 	EPrimaryTrigger PrimaryTrigger;
 	EPrimaryTrigger LastPrimaryValue;
 
@@ -219,6 +222,8 @@ protected:
 	// Blade ability
 	void SpawnBlades();
 	void ThrowBlades();
+	void StartAim();
+	void StopAim();
 
 	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
 	int32 BladesToSpawn;
@@ -228,6 +233,10 @@ protected:
 	TArray<ABladeActor*> BladesSpawned;
 	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
 	float BladeSpiritNeeded;
+	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
+	float AimingMoveSpeed;
+	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
+	float AimingFOV;
 
 	// Heal ability
 	void StartHeal();

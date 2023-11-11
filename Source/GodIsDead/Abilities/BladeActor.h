@@ -40,14 +40,20 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "BladeValues")
 	int Damage;
 
+	// Is free?
+	bool bIsFree;
+
+	// Camera rotation
+	FRotator BladeRotation;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 	// Set target
-	void SetTarget(AActor* Target);
+	void FaceTarget(AActor* Target);
+	void SetRotation(FRotator Rotation);
 
-	// Is free
-	bool bIsFree;
+	void ThrowBlade();
 
 };
