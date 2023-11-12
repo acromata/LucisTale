@@ -28,6 +28,9 @@ APlayerCharacter::APlayerCharacter()
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
 	Camera->SetupAttachment(CameraSpringArm);
 
+	// Rotation
+	bUseControllerRotationYaw = false;
+
 	// Sword mesh
 	SwordMesh = CreateDefaultSubobject<UStaticMeshComponent>("SwordMesh");
 	SwordMesh->SetupAttachment(GetMesh(), "RightHand");
@@ -531,6 +534,8 @@ void APlayerCharacter::SpawnBlades()
 		LastPrimaryValue = PrimaryTrigger;
 		PrimaryTrigger = EPrimaryTrigger::Blade;
 
+		FVector BladeLocation = FVector(0, 0, 0);
+
 		// Spawn blades
 		for (int32 i = 0; i < BladesToSpawn; i++)
 		{
@@ -545,8 +550,10 @@ void APlayerCharacter::SpawnBlades()
 					EAttachmentRule::SnapToTarget, false
 				), "AbilitySocket");
 
-				// Set random location
-				SpawnedBlade->SetActorLocation(SpawnedBlade->GetActorLocation() + FVector(FMath::FRandRange(20.f, -20.f)));
+				// Set Location
+				//SpawnedBlade->SetActorLocation(SpawnedBlade->GetActorLocation() + FMath::FRandRange(20.f, -20.f));
+				SpawnedBlade->SetActorRelativeLocation(BladeLocation);
+				BladeLocation.X += 10;
 
 				// Set rotation
 				SpawnedBlade->SetActorRotation(FRotator(0, GetActorRotation().Yaw, GetActorRotation().Pitch));
@@ -569,7 +576,6 @@ void APlayerCharacter::ThrowBlades()
 			Blade->FaceTarget(TargettedActor);
 		}*/
 
-		// Set blade rotation
 		Blade->SetRotation(Camera->GetComponentRotation());
 
 		// Throw the blade
@@ -582,7 +588,7 @@ void APlayerCharacter::ThrowBlades()
 		if (BladesSpawned.Num() <= 0)
 		{
 			PrimaryTrigger = LastPrimaryValue;
-			StopAim();
+			//StopAim();
 		}
 	}
 }
@@ -590,13 +596,17 @@ void APlayerCharacter::ThrowBlades()
 void APlayerCharacter::StartAim()
 {
 	Camera->FieldOfView = AimingFOV;
+	Camera->SetRelativeLocation(AimCameraOffset);
 	GetCharacterMovement()->MaxWalkSpeed = AimingMoveSpeed;
+	bUseControllerRotationYaw = true;
 }
 
 void APlayerCharacter::StopAim()
 {
 	Camera->FieldOfView = 90.f;
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+	Camera->SetRelativeLocation(FVector(0));
+	bUseControllerRotationYaw = false;
 }
 
 void APlayerCharacter::StartHeal()

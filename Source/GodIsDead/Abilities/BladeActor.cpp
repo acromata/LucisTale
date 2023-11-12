@@ -94,7 +94,6 @@ void ABladeActor::FaceTarget(AActor* Target)
 void ABladeActor::SetRotation(FRotator Rotation)
 {
 	BladeRotation = Rotation;
-	BladeRotation.Roll = 0;
 }
 
 void ABladeActor::ThrowBlade()

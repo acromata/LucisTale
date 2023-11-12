@@ -237,6 +237,8 @@ protected:
 	float AimingMoveSpeed;
 	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
 	float AimingFOV;
+	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
+	FVector AimCameraOffset;
 
 	// Heal ability
 	void StartHeal();
