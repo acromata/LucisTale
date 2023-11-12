@@ -53,7 +53,7 @@ APlayerCharacter::APlayerCharacter()
 	bCanMove = true;
 
 	// Health
-	MaxHealth = 100.f;
+	MaxHealth = 6; // 3 hearts
 
 	// Primary trigger
 	PrimaryTrigger = EPrimaryTrigger::Sword;
@@ -63,8 +63,12 @@ APlayerCharacter::APlayerCharacter()
 	SpiritRefillAmount = 5.f;
 	SpiritRefillDelay = 2.f;
 
+	// Healing
+	SpiritNeededToHeal = 30.f;
+	AmountToHeal = 2;
+	HealSpiritToSubtract = 1.f;
+
 	// Blade
-	AimingMoveSpeed = 450.f;
 	AimingFOV = 70.f;
 }
 
@@ -80,8 +84,6 @@ void APlayerCharacter::BeginPlay()
 
 	CurrentSpirit = MaxSpirit;
 	CurrentSpiritRefillDelay = SpiritRefillDelay;
-
-	CurrentHealDelay = HealDelayAmount;
 
 	// Overlaps
 	TargetRange->OnComponentBeginOverlap.AddDynamic(this, &APlayerCharacter::BeginOverlapTarget);
@@ -133,8 +135,8 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 		EnhancedInput->BindAction(BladeAction, ETriggerEvent::Triggered, this, &APlayerCharacter::SpawnBlades);
 
-		EnhancedInput->BindAction(HealAction, ETriggerEvent::Triggered, this, &APlayerCharacter::StartHeal);
-		EnhancedInput->BindAction(HealAction, ETriggerEvent::Completed, this, &APlayerCharacter::EndHeal);
+		EnhancedInput->BindAction(HealAction, ETriggerEvent::Started, this, &APlayerCharacter::StartHeal);
+		EnhancedInput->BindAction(HealAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Heal);
 		
 		EnhancedInput->BindAction(RootAction, ETriggerEvent::Triggered, this, &APlayerCharacter::SpawnRoot);
 
@@ -571,11 +573,6 @@ void APlayerCharacter::ThrowBlades()
 
 	if (IsValid(Blade))
 	{
-		/*if (bIsTargetting)
-		{
-			Blade->FaceTarget(TargettedActor);
-		}*/
-
 		Blade->SetRotation(Camera->GetComponentRotation());
 
 		// Throw the blade
@@ -597,46 +594,42 @@ void APlayerCharacter::StartAim()
 {
 	Camera->FieldOfView = AimingFOV;
 	Camera->SetRelativeLocation(AimCameraOffset);
-	GetCharacterMovement()->MaxWalkSpeed = AimingMoveSpeed;
 	bUseControllerRotationYaw = true;
 }
 
 void APlayerCharacter::StopAim()
 {
 	Camera->FieldOfView = 90.f;
-	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	Camera->SetRelativeLocation(FVector(0));
 	bUseControllerRotationYaw = false;
 }
 
 void APlayerCharacter::StartHeal()
 {
-	if (CurrentSpirit > 0 && CurrentHealth < MaxHealth)
+	if (CurrentSpirit >= SpiritNeededToHeal)
 	{
-		CurrentHealDelay--;
-		if (CurrentHealDelay > 0)
-		{
-			// Before you start to heal
-			DrainSpirit(InitialHealSpiritToDrain);
-		}
-		else
-		{
-			DrainSpirit(HealSpiritToDrain);
-
-			// Start healing
-			Heal();
-		}
+		// Check how much spirit needed to subtract
+		SpiritAfterHeal = CurrentSpirit - SpiritNeededToHeal;
+		bCanHeal = true;
 	}
 }
 
 void APlayerCharacter::Heal()
 {
-	CurrentHealth += AmountToHeal;
-}
+	if (CurrentHealth != MaxHealth && bCanHeal)
+	{
+		if (CurrentSpirit <= SpiritAfterHeal)
+		{
+			// Heal if enough spirit has been subtracted
+			CurrentHealth += AmountToHeal;
+			StartHeal();
+		}
+		else
+		{
+			DrainSpirit(HealSpiritToSubtract);
+		}
+	}
 
-void APlayerCharacter::EndHeal()
-{
-	CurrentHealDelay = HealDelayAmount;
 }
 
 void APlayerCharacter::SpawnRoot()

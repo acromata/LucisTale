@@ -9,7 +9,7 @@ public class GodIsDead : ModuleRules
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore",
-		"EnhancedInput", "HeadMountedDisplay", "AIModule",  "GameplayCameras"});
+		"EnhancedInput", "HeadMountedDisplay", "AIModule", "GameplayCameras", "Niagara"});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 

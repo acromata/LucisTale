@@ -141,9 +141,9 @@ protected:
 
 	// Health
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health")
-	float MaxHealth;
+	int32 MaxHealth;
 	UPROPERTY(BlueprintReadWrite, Category = "Health")
-	float CurrentHealth;
+	int32 CurrentHealth;
 
 	// Interact
 	UFUNCTION()
@@ -234,8 +234,6 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
 	float BladeSpiritNeeded;
 	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
-	float AimingMoveSpeed;
-	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
 	float AimingFOV;
 	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
 	FVector AimCameraOffset;
@@ -243,25 +241,24 @@ protected:
 	// Heal ability
 	void StartHeal();
 	void Heal();
-	void EndHeal();
 
 	UPROPERTY(EditAnywhere, Category = "Abilities|Heal")
-	float HealDelayAmount;
-	float CurrentHealDelay;
+	float SpiritNeededToHeal;
 	UPROPERTY(EditAnywhere, Category = "Abilities|Heal")
-	float HealSpiritToDrain;
+	int32 AmountToHeal;
 	UPROPERTY(EditAnywhere, Category = "Abilities|Heal")
-	float InitialHealSpiritToDrain;
-	UPROPERTY(EditAnywhere, Category = "Abilities|Heal")
-	float AmountToHeal;
+	float HealSpiritToSubtract;
+
+	bool bCanHeal;
+	float SpiritAfterHeal;
 
 	// Root ability
 	void SpawnRoot();
 	void ThrowRoot();
 
-	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
+	UPROPERTY(EditAnywhere, Category = "Abilities|Root")
 	TSubclassOf<ARootActor> RootActor;
-	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
+	UPROPERTY(EditAnywhere, Category = "Abilities|Root")
 	float RootSpiritNeeded;
 
 	ARootActor* SpawnedRoot;

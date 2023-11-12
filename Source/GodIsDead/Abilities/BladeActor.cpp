@@ -4,6 +4,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "GodIsDead/Player/PlayerCharacter.h"
 #include "GodIsDead/Components/HealthComponent.h"
+#include "NiagaraComponent.h"
 
 // Sets default values
 ABladeActor::ABladeActor()
@@ -16,6 +17,11 @@ ABladeActor::ABladeActor()
 
 	BladeMesh = CreateDefaultSubobject<UStaticMeshComponent>("BladeMesh");
 	BladeMesh->SetupAttachment(SphereComponent);
+
+	Trail = CreateDefaultSubobject<UNiagaraComponent>("BladeTrail");
+	Trail->SetupAttachment(BladeMesh);
+	Trail->SetRelativeRotation(FRotator(180, 0, 0));
+	Trail->bAutoActivate = false;
 
 	BladeSpeed = 50.f;
 	LifeTime = 5.f;
@@ -78,19 +84,6 @@ void ABladeActor::Tick(float DeltaTime)
 	}
 }
 
-void ABladeActor::FaceTarget(AActor* Target)
-{
-	if (IsValid(Target))
-	{
-		TargettedActor = Target;
-		if (IsValid(TargettedActor))
-		{
-			FRotator TargetRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargettedActor->GetActorLocation());
-			SetActorRotation(TargetRotation);
-		}
-	}
-}
-
 void ABladeActor::SetRotation(FRotator Rotation)
 {
 	BladeRotation = Rotation;
@@ -99,5 +92,6 @@ void ABladeActor::SetRotation(FRotator Rotation)
 void ABladeActor::ThrowBlade()
 {
 	bIsFree = true;
+	Trail->ActivateSystem();
 }
 

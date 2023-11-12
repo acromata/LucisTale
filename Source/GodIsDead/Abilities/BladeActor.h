@@ -15,6 +15,9 @@ class GODISDEAD_API ABladeActor : public AActor
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	class USphereComponent* SphereComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	class UNiagaraComponent* Trail;
+
 public:	
 	// Sets default values for this actor's properties
 	ABladeActor();
@@ -49,9 +52,8 @@ protected:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-
-	// Set target
-	void FaceTarget(AActor* Target);
+	
+	// Set rotation
 	void SetRotation(FRotator Rotation);
 
 	void ThrowBlade();
