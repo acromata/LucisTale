@@ -4,6 +4,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "GodIsDead/Player/PlayerCharacter.h"
 #include "GodIsDead/Components/HealthComponent.h"
+#include "GodIsDead/Enemy/EnemyBase.h"
 #include "NiagaraComponent.h"
 
 // Sets default values
@@ -46,16 +47,29 @@ void ABladeActor::Die()
 void ABladeActor::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+
+	// Collided with health actor
 	UHealthComponent* HealthComponent = OtherActor->FindComponentByClass<UHealthComponent>();
 	if (IsValid(HealthComponent))
 	{
-		HealthComponent->SubtractHealth(Damage);
-		Die();
+		// Collided with enemy head
+		AEnemyBase* Enemy = Cast<AEnemyBase>(OtherActor);
+		if (IsValid(Enemy) && OtherComp == Enemy->GetHeadHitbox())
+		{
+			HealthComponent->SubtractHealth(1000000);
+			Die();
+		}
+		else
+		{
+			HealthComponent->SubtractHealth(Damage);
+			Die();
+		}
 	}
 
-	if (OtherActor != UGameplayStatics::GetPlayerCharacter(GetWorld(), 0) && OtherActor != this)
+	// Collided with something else
+	if (OtherActor != UGameplayStatics::GetPlayerCharacter(GetWorld(), 0) && !OtherActor->IsA<ABladeActor>())
 	{
-		// Die
+		Die();
 	}
 }
 

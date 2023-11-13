@@ -1,5 +1,6 @@
 #include "GodIsDead/Enemy/EnemyBase.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/SphereComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "GodIsDead/Player/PlayerCharacter.h"
 #include "AIController.h"
@@ -16,6 +17,10 @@ AEnemyBase::AEnemyBase()
 	// Capsule Component
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Ignore);
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Block);
+
+	// Head
+	HeadCollider = CreateDefaultSubobject<USphereComponent>("Head Hitbox");
+	HeadCollider->SetupAttachment(GetMesh());
 
 	// Sword mesh
 	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>("WeaponMesh");
@@ -262,6 +267,11 @@ void AEnemyBase::Root()
 
 		GetWorld()->GetTimerManager().SetTimer(RootTimer, this, &AEnemyBase::EndRoot, RootTime, false);
 	}
+}
+
+USphereComponent* AEnemyBase::GetHeadHitbox()
+{
+	return HeadCollider;
 }
 
 void AEnemyBase::EndRoot()

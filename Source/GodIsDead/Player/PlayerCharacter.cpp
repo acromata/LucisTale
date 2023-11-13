@@ -622,6 +622,7 @@ void APlayerCharacter::Heal()
 		{
 			// Heal if enough spirit has been subtracted
 			CurrentHealth += AmountToHeal;
+			bCanHeal = false;
 			StartHeal();
 		}
 		else

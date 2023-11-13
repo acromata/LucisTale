@@ -26,6 +26,9 @@ class GODISDEAD_API AEnemyBase : public ACharacter
 	class UStaticMeshComponent* WeaponMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	class USphereComponent* HeadCollider;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	UHealthComponent* HealthComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
@@ -44,7 +47,6 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 protected:
-
 
 	// Pawn Sensing
 	UFUNCTION()
@@ -111,4 +113,6 @@ public:
 	// Root enemy
 	void Root();
 
+	// Get head hitbox
+	USphereComponent* GetHeadHitbox();
 };
