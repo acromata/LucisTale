@@ -237,6 +237,10 @@ protected:
 	float AimingFOV;
 	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
 	FVector AimCameraOffset;
+	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
+	USoundBase* BladeSpawnSound;
+	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
+	TArray<USoundBase*> BladeThrowSound;
 
 	// Heal ability
 	void StartHeal();

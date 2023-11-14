@@ -11,6 +11,7 @@
 #include "GodIsDead/Components/HealthComponent.h"
 #include "GodIsDead/Enemy/EnemyBase.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values
 APlayerCharacter::APlayerCharacter()
@@ -536,6 +537,10 @@ void APlayerCharacter::SpawnBlades()
 		LastPrimaryValue = PrimaryTrigger;
 		PrimaryTrigger = EPrimaryTrigger::Blade;
 
+		// Blade SFX
+		UGameplayStatics::PlaySound2D(GetWorld(), BladeSpawnSound);
+
+		// Blade spawn location
 		FVector BladeLocation = FVector(0, 0, 0);
 
 		// Spawn blades
@@ -570,6 +575,7 @@ void APlayerCharacter::SpawnBlades()
 void APlayerCharacter::ThrowBlades()
 {
 	ABladeActor* Blade = BladesSpawned.Last();
+	int BladeNum = BladesSpawned.Num();
 
 	if (IsValid(Blade))
 	{
@@ -578,6 +584,9 @@ void APlayerCharacter::ThrowBlades()
 		// Throw the blade
 		Blade->ThrowBlade();
 
+		// Play SFX
+		UGameplayStatics::PlaySound2D(GetWorld(), BladeThrowSound[BladeNum]);
+
 		// Remove blade from array
 		BladesSpawned.Remove(Blade);
 
@@ -585,7 +594,6 @@ void APlayerCharacter::ThrowBlades()
 		if (BladesSpawned.Num() <= 0)
 		{
 			PrimaryTrigger = LastPrimaryValue;
-			//StopAim();
 		}
 	}
 }
