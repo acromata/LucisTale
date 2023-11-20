@@ -8,7 +8,7 @@ UHealthComponent::UHealthComponent()
 	MaxHealth = 3;
 }
 
-void UHealthComponent::SubtractHealth(int HealthToSubtract)
+void UHealthComponent::SubtractHealth(int32 HealthToSubtract)
 {
 	CurrentHealth -= HealthToSubtract;
 

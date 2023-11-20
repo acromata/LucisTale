@@ -196,6 +196,7 @@ void AEnemyBase::Attack()
 			{
 				if (Player->bIsParrying)
 				{
+					StunTime = Player->StunTime;
 					Stun();
 					bHasDamagedPlayer = true;
 				}

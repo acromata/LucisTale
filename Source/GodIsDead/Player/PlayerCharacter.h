@@ -4,7 +4,6 @@
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
 #include "GodIsDead/Abilities/BladeActor.h"
-#include "GodIsDead/Abilities/RootActor.h"
 #include "PlayerCharacter.generated.h"
 
 UENUM(BlueprintType)
@@ -12,8 +11,7 @@ enum EPrimaryTrigger
 {
 	None,
 	Sword,
-	Blade,
-	Root
+	Blade
 };
 
 UCLASS()
@@ -61,9 +59,6 @@ protected:
 	class UInputAction* PrimaryAction;
 
 	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
-	class UInputAction* SecondaryAction;
-
-	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
 	class UInputAction* MoveAction;
 
 	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
@@ -91,7 +86,7 @@ protected:
 	class UInputAction* BladeAction;
 
 	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
-	class UInputAction* RootAction;
+	class UInputAction* ShockwaveAction;
 
 	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
 	class UInputAction* ParryAction;
@@ -115,10 +110,8 @@ protected:
 	bool bIsRunning;
 	bool bCanMove;
 
-	// Primary & Secondary Actions
+	// Primary actions
 	void PrimaryButton();
-	void SecondaryButton();
-	void SecondaryButtonCompleted();
 	EPrimaryTrigger PrimaryTrigger;
 	EPrimaryTrigger LastPrimaryValue;
 
@@ -256,25 +249,34 @@ protected:
 	bool bCanHeal;
 	float SpiritAfterHeal;
 
-	// Root ability
-	void SpawnRoot();
-	void ThrowRoot();
+	// Shockwave ability
+	void ChargeShockwave();
+	void Shockwave();
 
-	UPROPERTY(EditAnywhere, Category = "Abilities|Root")
-	TSubclassOf<ARootActor> RootActor;
-	UPROPERTY(EditAnywhere, Category = "Abilities|Root")
-	float RootSpiritNeeded;
+	UPROPERTY(EditAnywhere, Category = "Abilities|Shockwave")
+	float ShockwaveRangeRate;
+	UPROPERTY(EditAnywhere, Category = "Abilities|Shockwave")
+	int32 ShockwaveDamage;
+	UPROPERTY(EditAnywhere, Category = "Abilities|Shockwave")
+	float ShockwaveSpiritToSubtract;
+	UPROPERTY(EditAnywhere, Category = "Abilities|Shockwave")
+	float ShockwaveRangeLimit;
 
-	ARootActor* SpawnedRoot;
+	float ShockwaveRange;
 
 	// Parry
 	void Parry();
 	void EndParry();
+	void AllowParry();
 
 	UPROPERTY(EditAnywhere, Category = "Abilities|Parry")
 	float ParryTime;
+	UPROPERTY(EditAnywhere, Category = "Abilities|Parry")
+	float ParryCooldown;
 	UPROPERTY(EditAnywhere, Category = "Animation")
 	class UAnimMontage* ParryAnimation;
+
+	bool bCanParry;
 
 public:
 
@@ -287,4 +289,6 @@ public:
 
 	// Parry
 	bool bIsParrying;
+	UPROPERTY(EditAnywhere, Category = "Abilites|Parry")
+	float StunTime;
 };

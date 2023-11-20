@@ -71,6 +71,17 @@ APlayerCharacter::APlayerCharacter()
 
 	// Blade
 	AimingFOV = 70.f;
+
+	// Shockwave
+	ShockwaveSpiritToSubtract = 1.f;
+	ShockwaveRangeRate = 10.f;
+	ShockwaveRangeLimit = 80.f;
+	ShockwaveDamage = 10.f;
+
+	// Parry
+	bCanParry = true;
+	ParryCooldown = 2.f;
+	StunTime = 3.f;
 }
 
 // Called when the game starts or when spawned
@@ -129,8 +140,6 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInput->BindAction(InteractAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Interact);
 
 		EnhancedInput->BindAction(PrimaryAction, ETriggerEvent::Triggered, this, &APlayerCharacter::PrimaryButton);
-		EnhancedInput->BindAction(SecondaryAction, ETriggerEvent::Triggered, this, &APlayerCharacter::SecondaryButton);
-		EnhancedInput->BindAction(SecondaryAction, ETriggerEvent::Completed, this, &APlayerCharacter::SecondaryButtonCompleted);
 
 		EnhancedInput->BindAction(TargetAction, ETriggerEvent::Triggered, this, &APlayerCharacter::TargetActor);
 
@@ -139,7 +148,8 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInput->BindAction(HealAction, ETriggerEvent::Started, this, &APlayerCharacter::StartHeal);
 		EnhancedInput->BindAction(HealAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Heal);
 		
-		EnhancedInput->BindAction(RootAction, ETriggerEvent::Triggered, this, &APlayerCharacter::SpawnRoot);
+		EnhancedInput->BindAction(ShockwaveAction, ETriggerEvent::Triggered, this, &APlayerCharacter::ChargeShockwave);
+		EnhancedInput->BindAction(ShockwaveAction, ETriggerEvent::Completed, this, &APlayerCharacter::Shockwave);
 
 		EnhancedInput->BindAction(ParryAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Parry);
 	}
@@ -156,24 +166,7 @@ void APlayerCharacter::PrimaryButton()
 	case EPrimaryTrigger::Blade:
 		ThrowBlades();
 		break;
-	case EPrimaryTrigger::Root:
-		ThrowRoot();
-		break;
 	}
-}
-
-void APlayerCharacter::SecondaryButton()
-{
-	// ADS
-	if (PrimaryTrigger == EPrimaryTrigger::Blade)
-	{
-		StartAim();
-	}
-}
-
-void APlayerCharacter::SecondaryButtonCompleted()
-{
-	StopAim();
 }
 
 void APlayerCharacter::SubtractHealth(float Amount)
@@ -344,7 +337,8 @@ void APlayerCharacter::Pickup()
 // Start attack animation
 void APlayerCharacter::Attack()
 {
-	if (IsValid(AttackAnimation) && IsValid(EquippedItemData) && EquippedItemData->ItemType == EItemType::SwordType && PrimaryTrigger == EPrimaryTrigger::Sword)
+	if (IsValid(AttackAnimation) && IsValid(EquippedItemData) && 
+		EquippedItemData->ItemType == EItemType::SwordType && PrimaryTrigger == EPrimaryTrigger::Sword)
 	{
 		if (!bIsAttacking && !bIsJumping)
 		{
@@ -528,7 +522,7 @@ void APlayerCharacter::DrainSpirit(float SpiritToDrain)
 
 void APlayerCharacter::SpawnBlades()
 {
-	if (PrimaryTrigger != EPrimaryTrigger::Blade && PrimaryTrigger != EPrimaryTrigger::Root && CurrentSpirit >= BladeSpiritNeeded)
+	if (PrimaryTrigger != EPrimaryTrigger::Blade && CurrentSpirit >= BladeSpiritNeeded)
 	{	
 		// Subtract spirit
 		DrainSpirit(BladeSpiritNeeded);
@@ -542,6 +536,9 @@ void APlayerCharacter::SpawnBlades()
 
 		// Blade spawn location
 		FVector BladeLocation = FVector(0, 0, 0);
+
+		// Aim
+		StartAim();
 
 		// Spawn blades
 		for (int32 i = 0; i < BladesToSpawn; i++)
@@ -594,6 +591,7 @@ void APlayerCharacter::ThrowBlades()
 		if (BladesSpawned.Num() <= 0)
 		{
 			PrimaryTrigger = LastPrimaryValue;
+			StopAim();
 		}
 	}
 }
@@ -638,63 +636,66 @@ void APlayerCharacter::Heal()
 			DrainSpirit(HealSpiritToSubtract);
 		}
 	}
-
 }
 
-void APlayerCharacter::SpawnRoot()
+void APlayerCharacter::ChargeShockwave()
 {
-	if (CurrentSpirit >= RootSpiritNeeded && PrimaryTrigger != EPrimaryTrigger::Blade && PrimaryTrigger != EPrimaryTrigger::Root)
+	// Subtract spirit
+	if (CurrentSpirit >= ShockwaveSpiritToSubtract)
 	{
-		// Subtract spirit
-		DrainSpirit(RootSpiritNeeded);
-
-		// Set primary trigger
-		LastPrimaryValue = PrimaryTrigger;
-		PrimaryTrigger = EPrimaryTrigger::Root;
-
-		// Spawn root
-		SpawnedRoot = GetWorld()->SpawnActor<ARootActor>(RootActor, AbilitySpawnZone->GetRelativeTransform());
-
-		if (IsValid(SpawnedRoot))
-		{
-			// Attach to player
-			SpawnedRoot->AttachToComponent(GetMesh(), FAttachmentTransformRules(
-				EAttachmentRule::SnapToTarget,
-				EAttachmentRule::KeepRelative,
-				EAttachmentRule::SnapToTarget, false
-			), "AbilitySocket");
-
-			// Set rotation
-			SpawnedRoot->SetActorRotation(FRotator(0, GetActorRotation().Yaw, GetActorRotation().Pitch));
-		}
+		DrainSpirit(ShockwaveSpiritToSubtract);
+		ShockwaveRange += ShockwaveRangeRate;
+	}
+	else
+	{
+		Shockwave();
 	}
 }
 
-void APlayerCharacter::ThrowRoot()
+void APlayerCharacter::Shockwave()
 {
-	if (IsValid(SpawnedRoot))
+	if (ShockwaveRange >= ShockwaveRangeLimit)
 	{
-		PrimaryTrigger = LastPrimaryValue;
+		// Sweep for enemies
+		TArray<FHitResult> HitResults;
+		FVector SweepLocation = GetActorLocation();
+		FCollisionShape SphereShape = FCollisionShape::MakeSphere(ShockwaveRange);
 
-		if (bIsTargetting)
+		bool bIsHit = GetWorld()->SweepMultiByChannel(HitResults, SweepLocation,
+			SweepLocation, FQuat::Identity, ECC_Visibility, SphereShape);
+
+		for (FHitResult& HitResult : HitResults)
 		{
-			SpawnedRoot->SetTarget(TargettedActor);
+			if (IsValid(HitResult.GetActor()))
+			{
+				UHealthComponent* HealthComponent = HitResult.GetActor()->FindComponentByClass<UHealthComponent>();
+				if (IsValid(HealthComponent))
+				{
+					HealthComponent->SubtractHealth(ShockwaveDamage);
+				}
+			}
 		}
 
-		SpawnedRoot->bIsFree = true;
+		// Reset range
+		ShockwaveRange = 0;
+
+		// Debug
+		DrawDebugSphere(GetWorld(), GetActorLocation(), SphereShape.GetSphereRadius(), 50, FColor::Purple, false, 1.f);
 	}
 }
 
 void APlayerCharacter::Parry()
 {
-	if (!bIsParrying && !bIsAttacking && !bIsJumping)
+	if (bCanParry && !bIsAttacking && !bIsJumping)
 	{
 		bIsParrying = true;
 		bCanMove = false;
+		bCanParry = false;
 
 		// Play anim
 		GetMesh()->GetAnimInstance()->Montage_Play(ParryAnimation);
 
+		// End parry
 		FTimerHandle ParryTimer;
 		GetWorld()->GetTimerManager().SetTimer(ParryTimer, this, &APlayerCharacter::EndParry, ParryTime);
 	}
@@ -704,6 +705,15 @@ void APlayerCharacter::EndParry()
 {
 	bIsParrying = false;
 	bCanMove = true;
+
+	// Cooldown
+	FTimerHandle ParryTimer;
+	GetWorld()->GetTimerManager().SetTimer(ParryTimer, this, &APlayerCharacter::AllowParry, ParryCooldown);
+}
+
+void APlayerCharacter::AllowParry()
+{
+	bCanParry = true;
 }
 
 #pragma endregion

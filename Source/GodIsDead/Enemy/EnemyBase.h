@@ -91,10 +91,10 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly)
 	bool bIsStunned;
-	UPROPERTY(EditAnywhere, Category = "Stun")
-	float StunTime;
 	UPROPERTY(EditAnywhere, Category = "SFX")
 	USoundBase* StunSound;
+
+	float StunTime;
 
 	// Root
 	void EndRoot();

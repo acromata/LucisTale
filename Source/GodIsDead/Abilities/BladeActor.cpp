@@ -47,7 +47,6 @@ void ABladeActor::Die()
 void ABladeActor::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-
 	// Collided with health actor
 	UHealthComponent* HealthComponent = OtherActor->FindComponentByClass<UHealthComponent>();
 	if (IsValid(HealthComponent))
@@ -106,6 +105,7 @@ void ABladeActor::SetRotation(FRotator Rotation)
 void ABladeActor::ThrowBlade()
 {
 	bIsFree = true;
+	SetLifeSpan(LifeTime);
 	Trail->ActivateSystem();
 }
 

@@ -18,7 +18,7 @@ public:
 	UHealthComponent();
 
 	UFUNCTION(BlueprintCallable)
-	void SubtractHealth(int HealthToSubtract);
+	void SubtractHealth(int32 HealthToSubtract);
 
 protected:
 
