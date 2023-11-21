@@ -197,6 +197,8 @@ protected:
 
 	int32 TargetNum;
 
+	bool bCanUseAbility;
+
 	// Spirit
 	void UpdateSpirit();
 	void DrainSpirit(float SpiritToDrain);
@@ -236,7 +238,7 @@ protected:
 	TArray<USoundBase*> BladeThrowSound;
 
 	// Heal ability
-	void StartHeal();
+	void CheckSpiritNeededForHeal();
 	void Heal();
 
 	UPROPERTY(EditAnywhere, Category = "Abilities|Heal")
@@ -250,19 +252,21 @@ protected:
 	float SpiritAfterHeal;
 
 	// Shockwave ability
+	void CheckSpiritNeededForShockwave();
 	void ChargeShockwave();
 	void Shockwave();
 
 	UPROPERTY(EditAnywhere, Category = "Abilities|Shockwave")
-	float ShockwaveRangeRate;
+	float ShockwaveSpiritNeeded;
 	UPROPERTY(EditAnywhere, Category = "Abilities|Shockwave")
 	int32 ShockwaveDamage;
 	UPROPERTY(EditAnywhere, Category = "Abilities|Shockwave")
 	float ShockwaveSpiritToSubtract;
 	UPROPERTY(EditAnywhere, Category = "Abilities|Shockwave")
-	float ShockwaveRangeLimit;
-
 	float ShockwaveRange;
+
+	bool bCanShockwave;
+	float SpiritAfterShockwave;
 
 	// Parry
 	void Parry();

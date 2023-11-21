@@ -59,6 +59,9 @@ APlayerCharacter::APlayerCharacter()
 	// Primary trigger
 	PrimaryTrigger = EPrimaryTrigger::Sword;
 
+	//Abilities
+	bCanUseAbility = true;
+
 	// Spirit
 	MaxSpirit = 100.f;
 	SpiritRefillAmount = 5.f;
@@ -73,10 +76,10 @@ APlayerCharacter::APlayerCharacter()
 	AimingFOV = 70.f;
 
 	// Shockwave
+	ShockwaveSpiritNeeded = 40.f;
 	ShockwaveSpiritToSubtract = 1.f;
-	ShockwaveRangeRate = 10.f;
-	ShockwaveRangeLimit = 80.f;
-	ShockwaveDamage = 10.f;
+	ShockwaveDamage = 10;
+	ShockwaveRange = 200.f;
 
 	// Parry
 	bCanParry = true;
@@ -145,11 +148,11 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 		EnhancedInput->BindAction(BladeAction, ETriggerEvent::Triggered, this, &APlayerCharacter::SpawnBlades);
 
-		EnhancedInput->BindAction(HealAction, ETriggerEvent::Started, this, &APlayerCharacter::StartHeal);
+		EnhancedInput->BindAction(HealAction, ETriggerEvent::Started, this, &APlayerCharacter::CheckSpiritNeededForHeal);
 		EnhancedInput->BindAction(HealAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Heal);
 		
+		EnhancedInput->BindAction(ShockwaveAction, ETriggerEvent::Started, this, &APlayerCharacter::CheckSpiritNeededForShockwave);
 		EnhancedInput->BindAction(ShockwaveAction, ETriggerEvent::Triggered, this, &APlayerCharacter::ChargeShockwave);
-		EnhancedInput->BindAction(ShockwaveAction, ETriggerEvent::Completed, this, &APlayerCharacter::Shockwave);
 
 		EnhancedInput->BindAction(ParryAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Parry);
 	}
@@ -345,6 +348,7 @@ void APlayerCharacter::Attack()
 			GetMesh()->GetAnimInstance()->Montage_Play(AttackAnimation);
 			bIsAttacking = true;
 			bCanMove = false;
+			bCanUseAbility = false;
 		}
 		else
 		{
@@ -389,6 +393,7 @@ void APlayerCharacter::StopAttack()
 	bIsAttacking = false;
 	bIsBufferingAttack = false;
 	bCanMove = true;
+	bCanUseAbility = true;
 
 	ActorsHit.Empty();
 }
@@ -522,7 +527,7 @@ void APlayerCharacter::DrainSpirit(float SpiritToDrain)
 
 void APlayerCharacter::SpawnBlades()
 {
-	if (PrimaryTrigger != EPrimaryTrigger::Blade && CurrentSpirit >= BladeSpiritNeeded)
+	if (PrimaryTrigger != EPrimaryTrigger::Blade && CurrentSpirit >= BladeSpiritNeeded && bCanUseAbility)
 	{	
 		// Subtract spirit
 		DrainSpirit(BladeSpiritNeeded);
@@ -576,7 +581,14 @@ void APlayerCharacter::ThrowBlades()
 
 	if (IsValid(Blade))
 	{
-		Blade->SetRotation(Camera->GetComponentRotation());
+		if (bIsTargetting)
+		{
+			Blade->SetRotation(UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargettedActor->GetActorLocation()));
+		}
+		else
+		{
+			Blade->SetRotation(Camera->GetComponentRotation());
+		}
 
 		// Throw the blade
 		Blade->ThrowBlade();
@@ -610,9 +622,9 @@ void APlayerCharacter::StopAim()
 	bUseControllerRotationYaw = false;
 }
 
-void APlayerCharacter::StartHeal()
+void APlayerCharacter::CheckSpiritNeededForHeal()
 {
-	if (CurrentSpirit >= SpiritNeededToHeal)
+	if (CurrentSpirit >= SpiritNeededToHeal && bCanUseAbility)
 	{
 		// Check how much spirit needed to subtract
 		SpiritAfterHeal = CurrentSpirit - SpiritNeededToHeal;
@@ -629,7 +641,8 @@ void APlayerCharacter::Heal()
 			// Heal if enough spirit has been subtracted
 			CurrentHealth += AmountToHeal;
 			bCanHeal = false;
-			StartHeal();
+
+			CheckSpiritNeededForHeal();
 		}
 		else
 		{
@@ -638,50 +651,56 @@ void APlayerCharacter::Heal()
 	}
 }
 
+void APlayerCharacter::CheckSpiritNeededForShockwave()
+{
+	if (CurrentSpirit >= ShockwaveSpiritNeeded && bCanUseAbility)
+	{
+		SpiritAfterShockwave = CurrentSpirit - ShockwaveSpiritNeeded;
+		bCanShockwave = true;
+	}
+}
+
 void APlayerCharacter::ChargeShockwave()
 {
-	// Subtract spirit
-	if (CurrentSpirit >= ShockwaveSpiritToSubtract)
+	if (bCanShockwave)
 	{
-		DrainSpirit(ShockwaveSpiritToSubtract);
-		ShockwaveRange += ShockwaveRangeRate;
-	}
-	else
-	{
-		Shockwave();
+		if (CurrentSpirit <= SpiritAfterShockwave)
+		{
+			// Shockwave if enough spirit has been subtracted
+			Shockwave();
+			bCanShockwave = false;
+		}
+		else
+		{
+			DrainSpirit(ShockwaveSpiritToSubtract);
+		}
 	}
 }
 
 void APlayerCharacter::Shockwave()
 {
-	if (ShockwaveRange >= ShockwaveRangeLimit)
+	// Sweep for enemies
+	TArray<FHitResult> HitResults;
+	FVector SweepLocation = GetActorLocation();
+	FCollisionShape SphereShape = FCollisionShape::MakeSphere(ShockwaveRange);
+
+	bool bIsHit = GetWorld()->SweepMultiByChannel(HitResults, SweepLocation,
+		SweepLocation, FQuat::Identity, ECC_Visibility, SphereShape);
+
+	for (FHitResult& HitResult : HitResults)
 	{
-		// Sweep for enemies
-		TArray<FHitResult> HitResults;
-		FVector SweepLocation = GetActorLocation();
-		FCollisionShape SphereShape = FCollisionShape::MakeSphere(ShockwaveRange);
-
-		bool bIsHit = GetWorld()->SweepMultiByChannel(HitResults, SweepLocation,
-			SweepLocation, FQuat::Identity, ECC_Visibility, SphereShape);
-
-		for (FHitResult& HitResult : HitResults)
+		if (IsValid(HitResult.GetActor()))
 		{
-			if (IsValid(HitResult.GetActor()))
+			UHealthComponent* HealthComponent = HitResult.GetActor()->FindComponentByClass<UHealthComponent>();
+			if (IsValid(HealthComponent))
 			{
-				UHealthComponent* HealthComponent = HitResult.GetActor()->FindComponentByClass<UHealthComponent>();
-				if (IsValid(HealthComponent))
-				{
-					HealthComponent->SubtractHealth(ShockwaveDamage);
-				}
+				HealthComponent->SubtractHealth(ShockwaveDamage);
 			}
 		}
-
-		// Reset range
-		ShockwaveRange = 0;
-
-		// Debug
-		DrawDebugSphere(GetWorld(), GetActorLocation(), SphereShape.GetSphereRadius(), 50, FColor::Purple, false, 1.f);
 	}
+
+	// Debug
+	DrawDebugSphere(GetWorld(), GetActorLocation(), SphereShape.GetSphereRadius(), 50, FColor::Purple, false, 1.f);
 }
 
 void APlayerCharacter::Parry()
