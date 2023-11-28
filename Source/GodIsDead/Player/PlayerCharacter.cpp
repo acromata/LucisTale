@@ -687,14 +687,17 @@ void APlayerCharacter::Shockwave()
 	bool bIsHit = GetWorld()->SweepMultiByChannel(HitResults, SweepLocation,
 		SweepLocation, FQuat::Identity, ECC_Visibility, SphereShape);
 
+	int32 EnemiesInZone;
+
 	for (FHitResult& HitResult : HitResults)
 	{
 		if (IsValid(HitResult.GetActor()))
 		{
+			EnemiesInZone++;
 			UHealthComponent* HealthComponent = HitResult.GetActor()->FindComponentByClass<UHealthComponent>();
 			if (IsValid(HealthComponent))
 			{
-				HealthComponent->SubtractHealth(ShockwaveDamage);
+				HealthComponent->SubtractHealth(ShockwaveDamage * EnemiesInZone);
 			}
 		}
 	}

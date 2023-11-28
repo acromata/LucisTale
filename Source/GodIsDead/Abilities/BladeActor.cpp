@@ -51,7 +51,7 @@ UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHi
 	UHealthComponent* HealthComponent = OtherActor->FindComponentByClass<UHealthComponent>();
 	if (IsValid(HealthComponent))
 	{
-		// Collided with enemy head
+		/*// Collided with enemy head
 		AEnemyBase* Enemy = Cast<AEnemyBase>(OtherActor);
 		if (IsValid(Enemy) && OtherComp == Enemy->GetHeadHitbox())
 		{
@@ -62,13 +62,14 @@ UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHi
 		{
 			HealthComponent->SubtractHealth(Damage);
 			Die();
-		}
-	}
-
-	// Collided with something else
-	if (OtherActor != UGameplayStatics::GetPlayerCharacter(GetWorld(), 0) && !OtherActor->IsA<ABladeActor>())
-	{
+		}*/
+		HealthComponent->SubtractHealth(Damage);
 		Die();
+	}
+	else if (OtherActor != UGameplayStatics::GetPlayerCharacter(GetWorld(), 0) && !OtherActor->IsA<ABladeActor>())
+	{
+		// Collided with something else
+		//Die();
 	}
 }
 
