@@ -84,6 +84,8 @@ void AEnemyBase::OnSeePawn(APawn* Pawn)
 void AEnemyBase::OnHearNoise(APawn* NoiseInstigator, const FVector& Location, float Volume)
 {
 	// Investigate noise
+	LocationToInvestigate = Location;
+	bCanHearNoise = true;
 }
 
 #pragma endregion
@@ -105,6 +107,8 @@ void AEnemyBase::CheckState()
 		break;
 	case EEnemyState::EnemyAttack:
 		StateAttack();
+	case EEnemyState::EnemeyInvestiage:
+		StateInvestigate();
 		break;
 	}
 
@@ -124,6 +128,11 @@ void AEnemyBase::StateIdle()
 	{
 		// Chase player
 		SetState(EEnemyState::EnemyChase);
+	}
+	else if (bCanHearNoise)
+	{
+		// Investiage noise
+		SetState(EEnemyState::EnemyInvestigate);
 	}
 }
 
@@ -155,6 +164,16 @@ void AEnemyBase::StateChase()
 void AEnemyBase::StateStun()
 {
 	// Can't move or attack
+}
+
+void AEnemyBase::StateInvestigate()
+{
+	// Go to noise
+	AAIController* AIController = Cast<AAIController>(Controller);
+	if (IsValid(AIController) && !AIController->IsFollowingAPath())
+	{
+		AIController->MoveToLocation(LocationToInvestigate);
+	}
 }
 
 #pragma endregion
