@@ -641,12 +641,17 @@ void APlayerCharacter::Heal()
 			// Heal if enough spirit has been subtracted
 			CurrentHealth += AmountToHeal;
 			bCanHeal = false;
-
+			bCanMove = true;
 			CheckSpiritNeededForHeal();
 		}
 		else
 		{
 			DrainSpirit(HealSpiritToSubtract);
+
+			if (bCanMove)
+			{
+				bCanMove = false;
+			}
 		}
 	}
 }
@@ -669,10 +674,16 @@ void APlayerCharacter::ChargeShockwave()
 			// Shockwave if enough spirit has been subtracted
 			Shockwave();
 			bCanShockwave = false;
+			bCanMove = true;
 		}
 		else
 		{
 			DrainSpirit(ShockwaveSpiritToSubtract);
+
+			if (bCanMove)
+			{
+				bCanMove = false;
+			}
 		}
 	}
 }

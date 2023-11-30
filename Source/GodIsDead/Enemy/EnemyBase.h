@@ -13,7 +13,8 @@ enum class EEnemyState
 	EnemyIdle,
 	EnemyChase,
 	EnemyAttack,
-	EnemyStun
+	EnemyStun,
+	EnemyInvestigate
 };
 
 UCLASS()
@@ -55,6 +56,7 @@ protected:
 	void OnHearNoise(APawn* NoiseInstigator, const FVector& Location, float Volume);
 
 	bool bCanSeePlayer;
+	bool bCanHearNoise;
 
 	// States
 	void CheckState();
@@ -65,6 +67,7 @@ protected:
 	void StateChase();
 	void StateAttack();
 	void StateStun();
+	void StateInvestigate();
 
 	int LastStumbleIndex;
 
@@ -107,6 +110,9 @@ protected:
 	UPROPERTY(BlueprintReadOnly)
 	bool bIsAttacking;
 	bool bHasDamagedPlayer;
+
+	// Investigate
+	FVector LocationToInvestigate;
 
 public:
 
