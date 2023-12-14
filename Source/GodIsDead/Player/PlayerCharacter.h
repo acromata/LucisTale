@@ -6,6 +6,8 @@
 #include "GodIsDead/Abilities/BladeActor.h"
 #include "PlayerCharacter.generated.h"
 
+// keep going n make a shit ton of money from this game BITCH!!!!!!!!!!!!!!!!!!!
+
 UENUM(BlueprintType)
 enum EPrimaryTrigger
 {
