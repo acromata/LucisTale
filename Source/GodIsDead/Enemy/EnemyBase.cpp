@@ -107,7 +107,7 @@ void AEnemyBase::CheckState()
 		break;
 	case EEnemyState::EnemyAttack:
 		StateAttack();
-	case EEnemyState::EnemeyInvestiage:
+	case EEnemyState::EnemyInvestiage:
 		StateInvestigate();
 		break;
 	}

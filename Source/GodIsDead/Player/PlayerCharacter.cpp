@@ -698,7 +698,7 @@ void APlayerCharacter::Shockwave()
 	bool bIsHit = GetWorld()->SweepMultiByChannel(HitResults, SweepLocation,
 		SweepLocation, FQuat::Identity, ECC_Visibility, SphereShape);
 
-	int32 EnemiesInZone;
+	int32 EnemiesInZone = 0;
 
 	for (FHitResult& HitResult : HitResults)
 	{
