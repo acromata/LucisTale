@@ -107,7 +107,7 @@ void AEnemyBase::CheckState()
 		break;
 	case EEnemyState::EnemyAttack:
 		StateAttack();
-	case EEnemyState::EnemyInvestiage:
+	case EEnemyState::EnemyInvestigate:
 		StateInvestigate();
 		break;
 	}
@@ -131,6 +131,8 @@ void AEnemyBase::StateIdle()
 	}
 	else if (bCanHearNoise)
 	{
+		bCanHearNoise = false;
+
 		// Investiage noise
 		SetState(EEnemyState::EnemyInvestigate);
 	}
@@ -170,7 +172,7 @@ void AEnemyBase::StateInvestigate()
 {
 	// Go to noise
 	AAIController* AIController = Cast<AAIController>(Controller);
-	if (IsValid(AIController) && !AIController->IsFollowingAPath())
+	if (IsValid(AIController) && !AIController->IsFollowingAPath() && LocationToInvestigate != FVector(0))
 	{
 		AIController->MoveToLocation(LocationToInvestigate);
 	}

@@ -54,7 +54,7 @@ APlayerCharacter::APlayerCharacter()
 	bCanMove = true;
 
 	// Health
-	MaxHealth = 6; // 3 hearts
+	MaxHealth = 60;
 
 	// Primary trigger
 	PrimaryTrigger = EPrimaryTrigger::Sword;
@@ -69,7 +69,7 @@ APlayerCharacter::APlayerCharacter()
 
 	// Healing
 	SpiritNeededToHeal = 30.f;
-	AmountToHeal = 2;
+	AmountToHeal = 20;
 	HealSpiritToSubtract = 1.f;
 
 	// Blade
