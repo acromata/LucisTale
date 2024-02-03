@@ -80,11 +80,15 @@ protected:
 	void StopAttack();
 
 	UPROPERTY(EditAnywhere, Category = "Attack")
-	float Damage;
+	float DamageMultiplier;
 	UPROPERTY(EditAnywhere, Category = "Attack")
-	float AttackingRange;
+	float AttackingDistance;
 	UPROPERTY(EditAnywhere, Category = "Attack")
-	UAnimMontage* AttackAnimation;
+	TArray<UAnimMontage*> AttackAnimations;
+
+	// Weapon
+	UPROPERTY(EditAnywhere, Category = "Attack")
+	class UItemData* EquippedItemData;
 
 	AActor* Target;
 

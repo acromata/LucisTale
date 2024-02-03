@@ -172,9 +172,11 @@ void APlayerCharacter::PrimaryButton()
 	}
 }
 
-void APlayerCharacter::SubtractHealth(float Amount)
+void APlayerCharacter::SubtractHealth(int32 Health)
 {
-	CurrentHealth -= Amount;
+	CurrentHealth -= Health;
+
+	// Stagger
 }
 
 #pragma region Movement
@@ -560,7 +562,6 @@ void APlayerCharacter::SpawnBlades()
 				), "AbilitySocket");
 
 				// Set Location
-				//SpawnedBlade->SetActorLocation(SpawnedBlade->GetActorLocation() + FMath::FRandRange(20.f, -20.f));
 				SpawnedBlade->SetActorRelativeLocation(BladeLocation);
 				BladeLocation.X += 10;
 

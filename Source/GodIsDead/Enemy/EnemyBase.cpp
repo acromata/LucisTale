@@ -2,7 +2,8 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/SphereComponent.h"
 #include "Kismet/GameplayStatics.h"
-#include "GodIsDead/Player/PlayerCharacter.h"
+#include "../Player/PlayerCharacter.h"
+#include "../Inventory/ItemData.h"
 #include "AIController.h"
 
 // Sets default values
@@ -44,7 +45,8 @@ AEnemyBase::AEnemyBase()
 	LastStumbleIndex = 0;
 
 	// Attacking
-	AttackingRange = 300.f;
+	AttackingDistance = 300.f;
+	DamageMultiplier = 1.0;
 }
 
 // Called when the game starts or when spawned
@@ -61,6 +63,12 @@ void AEnemyBase::BeginPlay()
 	// Pawn Sensing Bindings
 	PawnSensing->OnSeePawn.AddDynamic(this, &AEnemyBase::OnSeePawn);
 	PawnSensing->OnHearNoise.AddDynamic(this, &AEnemyBase::OnHearNoise);
+
+	// Set Item Mesh
+	if (IsValid(EquippedItemData))
+	{
+		WeaponMesh->SetStaticMesh(EquippedItemData->ItemMesh);
+	}
 }
 
 // Called every frame
@@ -107,6 +115,7 @@ void AEnemyBase::CheckState()
 		break;
 	case EEnemyState::EnemyAttack:
 		StateAttack();
+		break;
 	case EEnemyState::EnemyInvestigate:
 		StateInvestigate();
 		break;
@@ -144,7 +153,7 @@ void AEnemyBase::StateChase()
 	// Get distance between target and self
 	float DistanceFromTarget = FVector::Distance(Target->GetActorLocation(), GetActorLocation());
 
-	if (DistanceFromTarget <= AttackingRange)
+	if (DistanceFromTarget <= AttackingDistance)
 	{
 		// Attack if close enough
 		if (!bIsAttacking && !bIsStumbling)
@@ -185,10 +194,16 @@ void AEnemyBase::StateInvestigate()
 // Attacking
 void AEnemyBase::StateAttack()
 {
-	if (IsValid(AttackAnimation) && !bIsAttacking)
+	if (AttackAnimations.IsValidIndex(AttackAnimations.Num() - 1) && !bIsAttacking)
 	{
-		GetMesh()->GetAnimInstance()->Montage_Play(AttackAnimation);
-		bIsAttacking = true;
+		int32 RandomIndex = FMath::RandRange(0, AttackAnimations.Num() - 1);
+		UAnimMontage* AttackAnim = AttackAnimations[RandomIndex]; // Get a random number from array
+
+		if (IsValid(AttackAnim))
+		{
+			GetMesh()->GetAnimInstance()->Montage_Play(AttackAnim);
+			bIsAttacking = true;
+		}
 	}
 }
 
@@ -223,8 +238,12 @@ void AEnemyBase::Attack()
 				}
 				else
 				{
-					Player->SubtractHealth(Damage);
-					bHasDamagedPlayer = true;
+					if (IsValid(EquippedItemData))
+					{
+						int32 Damage = EquippedItemData->ItemValue * DamageMultiplier;
+						Player->SubtractHealth(Damage);
+						bHasDamagedPlayer = true;
+					}
 				}
 			}
 		}

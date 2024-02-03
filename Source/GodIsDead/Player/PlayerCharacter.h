@@ -291,7 +291,7 @@ public:
 	TArray<class APickupActor*> PickupsInRange;
 
 	// Heal
-	void SubtractHealth(float Amount);
+	void SubtractHealth(int32 Health);
 
 	// Parry
 	bool bIsParrying;
