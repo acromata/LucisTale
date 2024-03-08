@@ -1,4 +1,4 @@
-#include "LucisTale/Player/PlayerCharacter.h"
+#include "../Player/PlayerCharacter.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/SphereComponent.h"
@@ -8,8 +8,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "LucisTale/Inventory/PickupActor.h"
 #include "DrawDebugHelpers.h"
-#include "LucisTale/Components/HealthComponent.h"
-#include "LucisTale/Enemy/EnemyBase.h"
+#include "../Components/HealthComponent.h"
+#include "../Enemy/EnemyBase.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -54,32 +54,10 @@ APlayerCharacter::APlayerCharacter()
 	bCanMove = true;
 
 	// Health
-	MaxHealth = 60;
-
-	// Primary trigger
-	PrimaryTrigger = EPrimaryTrigger::Sword;
+	MaxHealth = 100;
 
 	//Abilities
 	bCanUseAbility = true;
-
-	// Spirit
-	MaxSpirit = 100.f;
-	SpiritRefillAmount = 5.f;
-	SpiritRefillDelay = 2.f;
-
-	// Healing
-	SpiritNeededToHeal = 30.f;
-	AmountToHeal = 20;
-	HealSpiritToSubtract = 1.f;
-
-	// Blade
-	AimingFOV = 70.f;
-
-	// Shockwave
-	ShockwaveSpiritNeeded = 40.f;
-	ShockwaveSpiritToSubtract = 1.f;
-	ShockwaveDamage = 10;
-	ShockwaveRange = 200.f;
 
 	// Parry
 	bCanParry = true;
@@ -97,9 +75,6 @@ void APlayerCharacter::BeginPlay()
 	CurrentHealth = MaxHealth;
 	CurrentRefillStanimaDelay = RefillStanimaDelay;
 
-	CurrentSpirit = MaxSpirit;
-	CurrentSpiritRefillDelay = SpiritRefillDelay;
-
 	// Overlaps
 	TargetRange->OnComponentBeginOverlap.AddDynamic(this, &APlayerCharacter::BeginOverlapTarget);
 	TargetRange->OnComponentEndOverlap.AddDynamic(this, &APlayerCharacter::EndOverlapTarget);
@@ -111,7 +86,6 @@ void APlayerCharacter::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	UpdateStanima();
-	UpdateSpirit();
 	OnTargettingActor();
 }
 
@@ -142,41 +116,12 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		
 		EnhancedInput->BindAction(InteractAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Interact);
 
-		EnhancedInput->BindAction(PrimaryAction, ETriggerEvent::Triggered, this, &APlayerCharacter::PrimaryButton);
+		EnhancedInput->BindAction(AttackAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Attack);
 
 		EnhancedInput->BindAction(TargetAction, ETriggerEvent::Triggered, this, &APlayerCharacter::TargetActor);
 
-		EnhancedInput->BindAction(BladeAction, ETriggerEvent::Triggered, this, &APlayerCharacter::SpawnBlades);
-
-		EnhancedInput->BindAction(HealAction, ETriggerEvent::Started, this, &APlayerCharacter::CheckSpiritNeededForHeal);
-		EnhancedInput->BindAction(HealAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Heal);
-		
-		EnhancedInput->BindAction(ShockwaveAction, ETriggerEvent::Started, this, &APlayerCharacter::CheckSpiritNeededForShockwave);
-		EnhancedInput->BindAction(ShockwaveAction, ETriggerEvent::Triggered, this, &APlayerCharacter::ChargeShockwave);
-
 		EnhancedInput->BindAction(ParryAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Parry);
 	}
-}
-
-// Check what should happen when you press the attack button
-void APlayerCharacter::PrimaryButton()
-{
-	switch (PrimaryTrigger)
-	{
-	case EPrimaryTrigger::Sword:
-		Attack();
-		break;
-	case EPrimaryTrigger::Blade:
-		ThrowBlades();
-		break;
-	}
-}
-
-void APlayerCharacter::SubtractHealth(int32 Health)
-{
-	CurrentHealth -= Health;
-
-	// Stagger
 }
 
 #pragma region Movement
@@ -343,7 +288,7 @@ void APlayerCharacter::Pickup()
 void APlayerCharacter::Attack()
 {
 	if (IsValid(AttackAnimation) && IsValid(EquippedItemData) && 
-		EquippedItemData->ItemType == EItemType::SwordType && PrimaryTrigger == EPrimaryTrigger::Sword)
+		EquippedItemData->ItemType == EItemType::SwordType)
 	{
 		if (!bIsAttacking && !bIsJumping)
 		{
@@ -490,7 +435,7 @@ void APlayerCharacter::BeginOverlapTarget(UPrimitiveComponent* OverlappedComp, A
 	AEnemyBase* TargetEnemy = Cast<AEnemyBase>(OtherActor);
 	if (IsValid(TargetEnemy))
 	{
-		TargetsInRange.Add(OtherActor);
+		TargetsInRange.Add(TargetEnemy);
 	}
 }
 
@@ -499,225 +444,13 @@ void APlayerCharacter::EndOverlapTarget(UPrimitiveComponent* OverlappedComp, AAc
 	AEnemyBase* TargetEnemy = Cast<AEnemyBase>(OtherActor);
 	if (IsValid(TargetEnemy))
 	{
-		TargetsInRange.Remove(OtherActor);
+		TargetsInRange.Remove(TargetEnemy);
 	}
 }
 
 #pragma endregion
 
-#pragma region Abilities
-
-/*
-// Increase spirit
-void APlayerCharacter::UpdateSpirit()
-{
-	if (CurrentSpirit < MaxSpirit)
-	{
-		CurrentSpiritRefillDelay--;
-		if (CurrentSpiritRefillDelay <= 0)
-		{
-			CurrentSpirit += SpiritRefillAmount;
-		}
-	}
-}
-
-// Subtract spirit
-void APlayerCharacter::DrainSpirit(float SpiritToDrain)
-{
-	CurrentSpirit -= SpiritToDrain;
-	CurrentSpiritRefillDelay = SpiritRefillDelay;
-}
-
-void APlayerCharacter::SpawnBlades()
-{
-	if (PrimaryTrigger != EPrimaryTrigger::Blade && CurrentSpirit >= BladeSpiritNeeded && bCanUseAbility)
-	{	
-		// Subtract spirit
-		DrainSpirit(BladeSpiritNeeded);
-
-		// Set primary trigger
-		LastPrimaryValue = PrimaryTrigger;
-		PrimaryTrigger = EPrimaryTrigger::Blade;
-
-		// Blade SFX
-		UGameplayStatics::PlaySound2D(GetWorld(), BladeSpawnSound);
-
-		// Blade spawn location
-		FVector BladeLocation = FVector(0, 0, 0);
-
-		// Aim
-		StartAim();
-
-		// Spawn blades
-		for (int32 i = 0; i < BladesToSpawn; i++)
-		{
-			ABladeActor* SpawnedBlade = GetWorld()->SpawnActor<ABladeActor>(BladeActor, AbilitySpawnZone->GetRelativeTransform());
-			
-			if (IsValid(SpawnedBlade))
-			{
-				// Attach to player
-				SpawnedBlade->AttachToComponent(GetMesh(), FAttachmentTransformRules(
-					EAttachmentRule::SnapToTarget,
-					EAttachmentRule::KeepRelative,
-					EAttachmentRule::SnapToTarget, false
-				), "AbilitySocket");
-
-				// Set Location
-				SpawnedBlade->SetActorRelativeLocation(BladeLocation);
-				BladeLocation.X += 10;
-
-				// Set rotation
-				SpawnedBlade->SetActorRotation(FRotator(0, GetActorRotation().Yaw, GetActorRotation().Pitch));
-
-				// Add to array
-				BladesSpawned.Add(SpawnedBlade);
-			}
-		}
-	}
-}
-
-void APlayerCharacter::ThrowBlades()
-{
-	ABladeActor* Blade = BladesSpawned.Last();
-	int BladeNum = BladesSpawned.Num();
-
-	if (IsValid(Blade))
-	{
-		if (bIsTargetting)
-		{
-			Blade->SetRotation(UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargettedActor->GetActorLocation()));
-		}
-		else
-		{
-			Blade->SetRotation(Camera->GetComponentRotation());
-		}
-
-		// Throw the blade
-		Blade->ThrowBlade();
-
-		// Play SFX
-		UGameplayStatics::PlaySound2D(GetWorld(), BladeThrowSound[BladeNum]);
-
-		// Remove blade from array
-		BladesSpawned.Remove(Blade);
-
-		// No more blades to throw
-		if (BladesSpawned.Num() <= 0)
-		{
-			PrimaryTrigger = LastPrimaryValue;
-			StopAim();
-		}
-	}
-}
-
-void APlayerCharacter::StartAim()
-{
-	Camera->FieldOfView = AimingFOV;
-	Camera->SetRelativeLocation(AimCameraOffset);
-	bUseControllerRotationYaw = true;
-}
-
-void APlayerCharacter::StopAim()
-{
-	Camera->FieldOfView = 90.f;
-	Camera->SetRelativeLocation(FVector(0));
-	bUseControllerRotationYaw = false;
-}
-
-void APlayerCharacter::CheckSpiritNeededForHeal()
-{
-	if (CurrentSpirit >= SpiritNeededToHeal && bCanUseAbility)
-	{
-		// Check how much spirit needed to subtract
-		SpiritAfterHeal = CurrentSpirit - SpiritNeededToHeal;
-		bCanHeal = true;
-	}
-}
-
-void APlayerCharacter::Heal()
-{
-	if (CurrentHealth != MaxHealth && bCanHeal)
-	{
-		if (CurrentSpirit <= SpiritAfterHeal)
-		{
-			// Heal if enough spirit has been subtracted
-			CurrentHealth += AmountToHeal;
-			bCanHeal = false;
-			bCanMove = true;
-			CheckSpiritNeededForHeal();
-		}
-		else
-		{
-			DrainSpirit(HealSpiritToSubtract);
-
-			if (bCanMove)
-			{
-				bCanMove = false;
-			}
-		}
-	}
-}
-
-void APlayerCharacter::CheckSpiritNeededForShockwave()
-{
-	if (CurrentSpirit >= ShockwaveSpiritNeeded && bCanUseAbility)
-	{
-		SpiritAfterShockwave = CurrentSpirit - ShockwaveSpiritNeeded;
-		bCanShockwave = true;
-	}
-}
-
-void APlayerCharacter::ChargeShockwave()
-{
-	if (bCanShockwave)
-	{
-		if (CurrentSpirit <= SpiritAfterShockwave)
-		{
-			// Shockwave if enough spirit has been subtracted
-			Shockwave();
-			bCanShockwave = false;
-			bCanMove = true;
-		}
-		else
-		{
-			DrainSpirit(ShockwaveSpiritToSubtract);
-
-			if (bCanMove)
-			{
-				bCanMove = false;
-			}
-		}
-	}
-}
-
-void APlayerCharacter::Shockwave()
-{
-	// Sweep for enemies
-	TArray<FHitResult> HitResults;
-	FVector SweepLocation = GetActorLocation();
-	FCollisionShape SphereShape = FCollisionShape::MakeSphere(ShockwaveRange);
-
-	bool bIsHit = GetWorld()->SweepMultiByChannel(HitResults, SweepLocation,
-		SweepLocation, FQuat::Identity, ECC_Visibility, SphereShape);
-
-	int32 EnemiesInZone = 0;
-
-	for (FHitResult& HitResult : HitResults)
-	{
-		if (IsValid(HitResult.GetActor()))
-		{
-			EnemiesInZone++;
-			UHealthComponent* HealthComponent = HitResult.GetActor()->FindComponentByClass<UHealthComponent>();
-			if (IsValid(HealthComponent))
-			{
-				HealthComponent->SubtractHealth(ShockwaveDamage * EnemiesInZone);
-			}
-		}
-	}
-
-	// Debug
-	DrawDebugSphere(GetWorld(), GetActorLocation(), SphereShape.GetSphereRadius(), 50, FColor::Purple, false, 1.f);
-}
+#pragma region Parry
 
 void APlayerCharacter::Parry()
 {
@@ -750,6 +483,12 @@ void APlayerCharacter::AllowParry()
 {
 	bCanParry = true;
 }
-*/
 
 #pragma endregion
+
+void APlayerCharacter::SubtractHealth(int32 Health)
+{
+	CurrentHealth -= Health;
+
+	// Stagger
+}

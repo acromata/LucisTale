@@ -27,9 +27,6 @@ class LUCISTALE_API AEnemyBase : public ACharacter
 	class UStaticMeshComponent* WeaponMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-	class USphereComponent* HeadCollider;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	UHealthComponent* HealthComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
@@ -103,14 +100,7 @@ protected:
 
 	float StunTime;
 
-	// Root
-	void EndRoot();
-
-	UPROPERTY(BlueprintReadOnly)
-	bool bIsRooted;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Root")
-	float RootTime;
-
+	// Attacking
 	UPROPERTY(BlueprintReadOnly)
 	bool bIsAttacking;
 	bool bHasDamagedPlayer;
@@ -118,11 +108,10 @@ protected:
 	// Investigate
 	FVector LocationToInvestigate;
 
+	// Targeting
+	bool bIsBeingTargeted;
+
 public:
 
-	// Root enemy
-	void Root();
-
-	// Get head hitbox
-	USphereComponent* GetHeadHitbox();
+	void SetTargeted(bool IsTargetting);
 };

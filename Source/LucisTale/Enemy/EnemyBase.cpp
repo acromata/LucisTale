@@ -19,10 +19,6 @@ AEnemyBase::AEnemyBase()
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Ignore);
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Block);
 
-	// Head
-	HeadCollider = CreateDefaultSubobject<USphereComponent>("Head Hitbox");
-	HeadCollider->SetupAttachment(GetMesh());
-
 	// Sword mesh
 	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>("WeaponMesh");
 	WeaponMesh->SetupAttachment(GetMesh(), "RightHand");
@@ -255,7 +251,7 @@ void AEnemyBase::StopAttack()
 	bHasDamagedPlayer = false;
 	bIsAttacking = false;
 
-	if (!bIsStunned && !bIsRooted)
+	if (!bIsStunned)
 	{
 		SetState(EEnemyState::EnemyChase);
 	}
@@ -295,36 +291,7 @@ void AEnemyBase::EndStun()
 
 #pragma endregion
 
-#pragma region Root
-void AEnemyBase::Root()
+void AEnemyBase::SetTargeted(bool IsTargetting)
 {
-	FTimerHandle RootTimer;
-
-	if (!bIsRooted)
-	{
-		// Root
-		bIsRooted = true;
-		SetState(EEnemyState::EnemyStun);
-
-		GetWorld()->GetTimerManager().SetTimer(RootTimer, this, &AEnemyBase::EndRoot, RootTime, false);
-	}
+	bIsBeingTargeted = IsTargetting;
 }
-
-USphereComponent* AEnemyBase::GetHeadHitbox()
-{
-	return HeadCollider;
-}
-
-void AEnemyBase::EndRoot()
-{
-	bIsRooted = false;
-	if (bCanSeePlayer)
-	{
-		SetState(EEnemyState::EnemyChase);
-	}
-	else
-	{
-		SetState(EEnemyState::EnemyIdle);
-	}
-}
-#pragma endregion

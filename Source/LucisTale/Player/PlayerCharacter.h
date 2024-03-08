@@ -7,15 +7,6 @@
 #include "PlayerCharacter.generated.h"
 
 // keep going n make a shit ton of money from this game BITCH!!!!!!!!!!!!!!!!!!!
-
-UENUM(BlueprintType)
-enum EPrimaryTrigger
-{
-	None,
-	Sword,
-	Blade
-};
-
 UCLASS()
 class LUCISTALE_API APlayerCharacter : public ACharacter
 {
@@ -58,7 +49,7 @@ protected:
 
 	// Input Actions
 	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
-	class UInputAction* PrimaryAction;
+	class UInputAction* AttackAction;
 
 	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
 	class UInputAction* MoveAction;
@@ -82,15 +73,6 @@ protected:
 	class UInputAction* TargetAction;
 
 	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
-	class UInputAction* HealAction;
-
-	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
-	class UInputAction* BladeAction;
-
-	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
-	class UInputAction* ShockwaveAction;
-
-	UPROPERTY(EditAnywhere, Category = "EnhancedInput")
 	class UInputAction* ParryAction;
 
 protected:
@@ -111,11 +93,6 @@ protected:
 
 	bool bIsRunning;
 	bool bCanMove;
-
-	// Primary actions
-	void PrimaryButton();
-	EPrimaryTrigger PrimaryTrigger;
-	EPrimaryTrigger LastPrimaryValue;
 
 	// Stanima
 	void UpdateStanima();
@@ -189,86 +166,17 @@ protected:
 	void EndOverlapTarget(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 	UPROPERTY()
-	TArray<AActor*> TargetsInRange;
+	TArray<class AEnemyBase*> TargetsInRange;
 	UPROPERTY(EditAnywhere, Category = "Targetting")
 	float TargetMaxDistance;
 	UPROPERTY(BlueprintReadOnly)
-	AActor* TargettedActor;
+	class AEnemyBase* TargettedActor; 
 	UPROPERTY(BlueprintReadOnly)
 	bool bIsTargetting;
 
 	int32 TargetNum;
 
 	bool bCanUseAbility;
-
-	// Spirit
-	void UpdateSpirit();
-	void DrainSpirit(float SpiritToDrain);
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Abilities|Spirit")
-	float MaxSpirit;
-	UPROPERTY(BlueprintReadOnly, Category = "Abilities|Spirit")
-	float CurrentSpirit;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Abilities|Spirit")
-	float SpiritRefillAmount;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Abilities|Spirit")
-	float SpiritRefillDelay;
-	UPROPERTY(BlueprintReadOnly, Category = "Abilities|Spirit")
-	float CurrentSpiritRefillDelay;
-
-	// Blade ability
-	void SpawnBlades();
-	void ThrowBlades();
-	void StartAim();
-	void StopAim();
-
-	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
-	int32 BladesToSpawn;
-	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
-	TSubclassOf<ABladeActor> BladeActor;
-	UPROPERTY(BlueprintReadOnly, Category = "Abilities|Blade")
-	TArray<ABladeActor*> BladesSpawned;
-	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
-	float BladeSpiritNeeded;
-	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
-	float AimingFOV;
-	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
-	FVector AimCameraOffset;
-	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
-	USoundBase* BladeSpawnSound;
-	UPROPERTY(EditAnywhere, Category = "Abilities|Blade")
-	TArray<USoundBase*> BladeThrowSound;
-
-	// Heal ability
-	void CheckSpiritNeededForHeal();
-	void Heal();
-
-	UPROPERTY(EditAnywhere, Category = "Abilities|Heal")
-	float SpiritNeededToHeal;
-	UPROPERTY(EditAnywhere, Category = "Abilities|Heal")
-	int32 AmountToHeal;
-	UPROPERTY(EditAnywhere, Category = "Abilities|Heal")
-	float HealSpiritToSubtract;
-
-	bool bCanHeal;
-	float SpiritAfterHeal;
-
-	// Shockwave ability
-	void CheckSpiritNeededForShockwave();
-	void ChargeShockwave();
-	void Shockwave();
-
-	UPROPERTY(EditAnywhere, Category = "Abilities|Shockwave")
-	float ShockwaveSpiritNeeded;
-	UPROPERTY(EditAnywhere, Category = "Abilities|Shockwave")
-	int32 ShockwaveDamage;
-	UPROPERTY(EditAnywhere, Category = "Abilities|Shockwave")
-	float ShockwaveSpiritToSubtract;
-	UPROPERTY(EditAnywhere, Category = "Abilities|Shockwave")
-	float ShockwaveRange;
-
-	bool bCanShockwave;
-	float SpiritAfterShockwave;
 
 	// Parry
 	void Parry();
