@@ -32,17 +32,16 @@ AEnemyBase::AEnemyBase()
 	PawnSensing->SetPeripheralVisionAngle(70.f);
 
 	// Stun
-	StunTime = 5.f;
+	StunTime = 1.f;
 
-	// Root
-	StunTime = 2.5f;
-
-	// States
-	LastStumbleIndex = 0;
+	// Strafe
+	CloseStrafeDistance = 300.f;
+	FarStrafeDistance = 800.f;
 
 	// Attacking
-	AttackingDistance = 300.f;
 	DamageMultiplier = 1.0;
+	MinTimeBeforeAttack = 5.f;
+	MaxTimeBeforeAttack = 15.f;
 }
 
 // Called when the game starts or when spawned
@@ -51,7 +50,7 @@ void AEnemyBase::BeginPlay()
 	Super::BeginPlay();
 	
 	// State default
-	ActiveState = EEnemyState::EnemyIdle;
+	ActiveState = EEnemyState::EIdleState;
 
 	// Set player as target
 	Target = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
@@ -72,7 +71,7 @@ void AEnemyBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	CheckState();
+	UpdateState();
 }
 
 #pragma region PawnSensing
@@ -96,29 +95,32 @@ void AEnemyBase::OnHearNoise(APawn* NoiseInstigator, const FVector& Location, fl
 
 #pragma region States
 
-void AEnemyBase::CheckState()
+void AEnemyBase::UpdateState()
 {
 	switch (ActiveState)
 	{
-	case EEnemyState::EnemyStun:
-		StateStun();
+	case EEnemyState::EIdleState:
+		Idle();
 		break;
-	case EEnemyState::EnemyIdle:
-		StateIdle();
+	case EEnemyState::EInvestigateState:
+		Investigate();
 		break;
-	case EEnemyState::EnemyChase:
-		StateChase();
+	case EEnemyState::EApproachState:
+		Approach();
 		break;
-	case EEnemyState::EnemyAttack:
-		StateAttack();
+	case EEnemyState::ECloseStrafeState:
+		CloseStrafe();
 		break;
-	case EEnemyState::EnemyInvestigate:
-		StateInvestigate();
+	case EEnemyState::EFarStrafeState:
+		FarStrafe();
+		break;
+	default:
+		SetState(EEnemyState::EIdleState);
 		break;
 	}
 
 	// Print state
-	//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("Active State: %s"), *UEnum::GetValueAsString<EEnemyState>(ActiveState)));
+	GEngine->AddOnScreenDebugMessage(1, 1.f, FColor::Green, FString::Printf(TEXT("Active State: %s"), *UEnum::GetValueAsString<EEnemyState>(ActiveState)));
 }
 
 void AEnemyBase::SetState(EEnemyState NewState)
@@ -127,53 +129,23 @@ void AEnemyBase::SetState(EEnemyState NewState)
 }
 
 // Idle state
-void AEnemyBase::StateIdle()
+void AEnemyBase::Idle()
 {
 	if (bCanSeePlayer)
 	{
 		// Chase player
-		SetState(EEnemyState::EnemyChase);
+		SetState(EEnemyState::EApproachState);
 	}
 	else if (bCanHearNoise)
 	{
 		bCanHearNoise = false;
 
 		// Investiage noise
-		SetState(EEnemyState::EnemyInvestigate);
+		SetState(EEnemyState::EInvestigateState);
 	}
 }
 
-// Chase player
-void AEnemyBase::StateChase()
-{
-	// Get distance between target and self
-	float DistanceFromTarget = FVector::Distance(Target->GetActorLocation(), GetActorLocation());
-
-	if (DistanceFromTarget <= AttackingDistance)
-	{
-		// Attack if close enough
-		if (!bIsAttacking && !bIsStumbling)
-		{
-			SetState(EEnemyState::EnemyAttack);
-		}
-	}
-	else
-	{
-		// Chase target
-		AAIController* AIController = Cast<AAIController>(Controller);
-		if (IsValid(AIController) && !AIController->IsFollowingAPath())
-		{
-			AIController->MoveToActor(Target);
-		}
-	}
-}
-
-void AEnemyBase::StateStun()
-{
-	// Can't move or attack
-}
-
-void AEnemyBase::StateInvestigate()
+void AEnemyBase::Investigate()
 {
 	// Go to noise
 	AAIController* AIController = Cast<AAIController>(Controller);
@@ -183,28 +155,88 @@ void AEnemyBase::StateInvestigate()
 	}
 }
 
-#pragma endregion
-
-#pragma region Attack
-
-// Attacking
-void AEnemyBase::StateAttack()
+// Approach player
+void AEnemyBase::Approach()
 {
-	if (AttackAnimations.IsValidIndex(AttackAnimations.Num() - 1) && !bIsAttacking)
-	{
-		int32 RandomIndex = FMath::RandRange(0, AttackAnimations.Num() - 1);
-		UAnimMontage* AttackAnim = AttackAnimations[RandomIndex]; // Get a random number from array
+	// Get distance between target and self
+	float DistanceFromTarget = FVector::Distance(Target->GetActorLocation(), GetActorLocation());
 
-		if (IsValid(AttackAnim))
+	if (DistanceFromTarget <= FarStrafeDistance)
+	{
+		SetState(EEnemyState::EFarStrafeState);
+	}
+	else
+	{
+		// Approach target
+		AAIController* AIController = Cast<AAIController>(Controller);
+		if (IsValid(AIController) && !AIController->IsFollowingAPath())
 		{
-			GetMesh()->GetAnimInstance()->Montage_Play(AttackAnim);
-			bIsAttacking = true;
+			AIController->MoveToActor(Target);
 		}
 	}
 }
 
+void AEnemyBase::FarStrafe()
+{
+	if (!bIsAttackWaitTimeSet)
+	{
+		// Random attack times
+		float WaitTime = FMath::FRandRange(MinTimeBeforeAttack, MaxTimeBeforeAttack);
+
+		FTimerHandle FarAttackHandle;
+		GetWorld()->GetTimerManager().SetTimer(FarAttackHandle, this, &AEnemyBase::CallAttack, WaitTime);
+	}
+
+	if (bAwaitingAttack)
+	{
+		FarAttack();
+	}
+}
+
+void AEnemyBase::CloseStrafe()
+{
+	if (!bIsAttackWaitTimeSet)
+	{
+		// Random attack times
+		float WaitTime = FMath::FRandRange(MinTimeBeforeAttack, MaxTimeBeforeAttack);
+
+		FTimerHandle CloseAttackHandle;
+		GetWorld()->GetTimerManager().SetTimer(CloseAttackHandle, this, &AEnemyBase::CallAttack, WaitTime);
+	}
+
+	if (bAwaitingAttack)
+	{
+		CloseAttack();
+	}
+}
+
+void AEnemyBase::CloseAttack()
+{
+	bAwaitingAttack, bIsAttackWaitTimeSet = false;
+	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, "Close Attack");
+}
+
+void AEnemyBase::FarAttack()
+{
+	bAwaitingAttack, bIsAttackWaitTimeSet = false;
+	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, "Far Attack");
+}
+
+#pragma endregion
+
+#pragma region Attack
+
+// Sets bAwaitingAttack to true
+void AEnemyBase::CallAttack()
+{
+	if (!bIsAttacking)
+	{
+		bAwaitingAttack = true;
+	}
+}
+
 // Trace that does damage, called in Attack Animation Montage
-void AEnemyBase::Attack()
+void AEnemyBase::AttackTrace()
 {
 	FVector StartLocation = WeaponMesh->GetSocketLocation("Start");
 	FVector EndLocation = WeaponMesh->GetSocketLocation("End");
@@ -246,18 +278,14 @@ void AEnemyBase::Attack()
 	}
 }
 
-void AEnemyBase::StopAttack()
+void AEnemyBase::StopAttackTrace()
 {
 	bHasDamagedPlayer = false;
 	bIsAttacking = false;
 
 	if (!bIsStunned)
 	{
-		SetState(EEnemyState::EnemyChase);
-	}
-	else
-	{
-		SetState(EEnemyState::EnemyStun);
+		SetState(EEnemyState::EApproachState);
 	}
 }
 
@@ -269,7 +297,6 @@ void AEnemyBase::Stun()
 	if (!bIsStunned)
 	{
 		// Stun
-		SetState(EEnemyState::EnemyStun);
 		bIsStunned = true;
 
 		// Play SFX
@@ -284,14 +311,13 @@ void AEnemyBase::Stun()
 void AEnemyBase::EndStun()
 {
 	bIsStunned = false;
-	SetState(EEnemyState::EnemyChase);
 
 	bHasDamagedPlayer = false;
 }
 
 #pragma endregion
 
-void AEnemyBase::SetTargeted(bool IsTargetting)
+void AEnemyBase::SetTargeted(bool bIsTargetting)
 {
-	bIsBeingTargeted = IsTargetting;
+	bIsBeingTargeted = bIsTargetting;
 }

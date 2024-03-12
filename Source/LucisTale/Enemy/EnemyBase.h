@@ -10,11 +10,11 @@
 UENUM(BlueprintType)
 enum class EEnemyState
 {
-	EnemyIdle,
-	EnemyChase,
-	EnemyAttack,
-	EnemyStun,
-	EnemyInvestigate
+	EIdleState,
+	EInvestigateState,
+	EApproachState,
+	ECloseStrafeState,
+	EFarStrafeState
 };
 
 UCLASS()
@@ -56,37 +56,55 @@ protected:
 	bool bCanHearNoise;
 
 	// States
-	void CheckState();
+	void UpdateState();
 	void SetState(EEnemyState NewState);
 	EEnemyState ActiveState;
 
-	void StateIdle();
-	void StateChase();
-	void StateAttack();
-	void StateStun();
-	void StateInvestigate();
+	void Idle();
+	void Investigate();
+	void Approach();
+	void CloseStrafe();
+	void FarStrafe();
 
-	int LastStumbleIndex;
+	// Investigate
+	FVector LocationToInvestigate;
 
-	bool bIsStumbling;
+	// Strafe
+	UPROPERTY(EditAnywhere, Category = "Values|Strafe")
+	float FarStrafeDistance;
+	UPROPERTY(EditAnywhere, Category = "Values|Strafe")
+	float CloseStrafeDistance;
 
 	// Attacking
-	UFUNCTION(BlueprintCallable)
-	void Attack();
-	UFUNCTION(BlueprintCallable)
-	void StopAttack();
+	void CloseAttack();
+	void FarAttack();
+	void CallAttack();
 
-	UPROPERTY(EditAnywhere, Category = "Attack")
+	UFUNCTION(BlueprintCallable)
+	void AttackTrace();
+	UFUNCTION(BlueprintCallable)
+	void StopAttackTrace();
+
+	UPROPERTY(EditAnywhere, Category = "Values|Attack")
 	float DamageMultiplier;
-	UPROPERTY(EditAnywhere, Category = "Attack")
-	float AttackingDistance;
-	UPROPERTY(EditAnywhere, Category = "Attack")
+	UPROPERTY(EditAnywhere, Category = "Values|Attack")
 	TArray<UAnimMontage*> AttackAnimations;
+	UPROPERTY(EditAnywhere, Category = "Values|Attack")
+	float MinTimeBeforeAttack;
+	UPROPERTY(EditAnywhere, Category = "Values|Attack")
+	float MaxTimeBeforeAttack;
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsAttacking;
+
+	bool bHasDamagedPlayer;
+	bool bAwaitingAttack;
+	bool bIsAttackWaitTimeSet;
 
 	// Weapon
-	UPROPERTY(EditAnywhere, Category = "Attack")
+	UPROPERTY(EditAnywhere, Category = "Values|Attack")
 	class UItemData* EquippedItemData;
 
+	// Target
 	AActor* Target;
 
 	// Stun
@@ -97,16 +115,8 @@ protected:
 	bool bIsStunned;
 	UPROPERTY(EditAnywhere, Category = "SFX")
 	USoundBase* StunSound;
-
+	UPROPERTY(EditDefaultsonly, Category = "Value|Stun")
 	float StunTime;
-
-	// Attacking
-	UPROPERTY(BlueprintReadOnly)
-	bool bIsAttacking;
-	bool bHasDamagedPlayer;
-
-	// Investigate
-	FVector LocationToInvestigate;
 
 	// Targeting
 	bool bIsBeingTargeted;
