@@ -4,6 +4,7 @@
 #include "GameFramework/Character.h"
 #include "LucisTale/Components/HealthComponent.h"
 #include "Perception/PawnSensingComponent.h"
+#include "AIController.h"
 #include "EnemyBase.generated.h"
 
 
@@ -14,7 +15,8 @@ enum class EEnemyState
 	EInvestigateState,
 	EApproachState,
 	ECloseStrafeState,
-	EFarStrafeState
+	EFarStrafeState,
+	EAttackingState
 };
 
 UCLASS()
@@ -54,6 +56,7 @@ protected:
 
 	bool bCanSeePlayer;
 	bool bCanHearNoise;
+	AAIController* AIController;
 
 	// States
 	void UpdateState();
@@ -65,6 +68,10 @@ protected:
 	void Approach();
 	void CloseStrafe();
 	void FarStrafe();
+	void AttackingState();
+
+	// Movement
+	float DistanceFromTarget;
 
 	// Investigate
 	FVector LocationToInvestigate;
@@ -88,7 +95,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Values|Attack")
 	float DamageMultiplier;
 	UPROPERTY(EditAnywhere, Category = "Values|Attack")
-	TArray<UAnimMontage*> AttackAnimations;
+	TArray<UAnimMontage*> CloseAttackAnimations;
+	UPROPERTY(EditAnywhere, Category = "Values|Attack")
+	TArray<UAnimMontage*> FarAttackAnimations;
 	UPROPERTY(EditAnywhere, Category = "Values|Attack")
 	float MinTimeBeforeAttack;
 	UPROPERTY(EditAnywhere, Category = "Values|Attack")

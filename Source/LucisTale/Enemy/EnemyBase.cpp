@@ -4,7 +4,6 @@
 #include "Kismet/GameplayStatics.h"
 #include "../Player/PlayerCharacter.h"
 #include "../Inventory/ItemData.h"
-#include "AIController.h"
 
 // Sets default values
 AEnemyBase::AEnemyBase()
@@ -49,6 +48,9 @@ void AEnemyBase::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	// Set AI Controller
+	AIController = Cast<AAIController>(Controller);
+
 	// State default
 	ActiveState = EEnemyState::EIdleState;
 
@@ -72,6 +74,9 @@ void AEnemyBase::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	UpdateState();
+
+	// Update distance between target and self
+	DistanceFromTarget = FVector::Distance(Target->GetActorLocation(), GetActorLocation());
 }
 
 #pragma region PawnSensing
@@ -114,6 +119,9 @@ void AEnemyBase::UpdateState()
 	case EEnemyState::EFarStrafeState:
 		FarStrafe();
 		break;
+	case EEnemyState::EAttackingState:
+		AttackingState();
+		break;
 	default:
 		SetState(EEnemyState::EIdleState);
 		break;
@@ -148,7 +156,6 @@ void AEnemyBase::Idle()
 void AEnemyBase::Investigate()
 {
 	// Go to noise
-	AAIController* AIController = Cast<AAIController>(Controller);
 	if (IsValid(AIController) && !AIController->IsFollowingAPath() && LocationToInvestigate != FVector(0))
 	{
 		AIController->MoveToLocation(LocationToInvestigate);
@@ -158,17 +165,14 @@ void AEnemyBase::Investigate()
 // Approach player
 void AEnemyBase::Approach()
 {
-	// Get distance between target and self
-	float DistanceFromTarget = FVector::Distance(Target->GetActorLocation(), GetActorLocation());
-
-	if (DistanceFromTarget <= FarStrafeDistance)
+	if (DistanceFromTarget <= CloseStrafeDistance)
 	{
-		SetState(EEnemyState::EFarStrafeState);
+		SetState(EEnemyState::ECloseStrafeState);
 	}
 	else
 	{
 		// Approach target
-		AAIController* AIController = Cast<AAIController>(Controller);
+		
 		if (IsValid(AIController) && !AIController->IsFollowingAPath())
 		{
 			AIController->MoveToActor(Target);
@@ -178,48 +182,101 @@ void AEnemyBase::Approach()
 
 void AEnemyBase::FarStrafe()
 {
-	if (!bIsAttackWaitTimeSet)
+	if (DistanceFromTarget <= FarStrafeDistance)
 	{
-		// Random attack times
-		float WaitTime = FMath::FRandRange(MinTimeBeforeAttack, MaxTimeBeforeAttack);
+		if (!bIsAttackWaitTimeSet)
+		{
+			// Stop movement
+			AIController->StopMovement();
 
-		FTimerHandle FarAttackHandle;
-		GetWorld()->GetTimerManager().SetTimer(FarAttackHandle, this, &AEnemyBase::CallAttack, WaitTime);
+			// Random attack times
+			float WaitTime = FMath::FRandRange(MinTimeBeforeAttack, MaxTimeBeforeAttack);
+
+			FTimerHandle FarAttackHandle;
+			GetWorld()->GetTimerManager().SetTimer(FarAttackHandle, this, &AEnemyBase::CallAttack, WaitTime);
+			bIsAttackWaitTimeSet = true;
+		}
+
+		if (bAwaitingAttack)
+		{
+			SetState(EEnemyState::EAttackingState);
+			FarAttack();
+		}
 	}
-
-	if (bAwaitingAttack)
+	else
 	{
-		FarAttack();
+		SetState(EEnemyState::EApproachState);
 	}
+	
 }
 
 void AEnemyBase::CloseStrafe()
 {
-	if (!bIsAttackWaitTimeSet)
+	if (DistanceFromTarget <= CloseStrafeDistance)
 	{
-		// Random attack times
-		float WaitTime = FMath::FRandRange(MinTimeBeforeAttack, MaxTimeBeforeAttack);
+		if (!bIsAttackWaitTimeSet)
+		{
+			// Stop movement
+			AIController->StopMovement();
 
-		FTimerHandle CloseAttackHandle;
-		GetWorld()->GetTimerManager().SetTimer(CloseAttackHandle, this, &AEnemyBase::CallAttack, WaitTime);
+			// Random attack times
+			float WaitTime = FMath::FRandRange(MinTimeBeforeAttack, MaxTimeBeforeAttack);
+
+			FTimerHandle CloseAttackHandle;
+			GetWorld()->GetTimerManager().SetTimer(CloseAttackHandle, this, &AEnemyBase::CallAttack, WaitTime);
+			bIsAttackWaitTimeSet = true;
+		}
+
+		if (bAwaitingAttack)
+		{
+			SetState(EEnemyState::EAttackingState);
+			CloseAttack();
+		}
 	}
-
-	if (bAwaitingAttack)
+	else
 	{
-		CloseAttack();
+		SetState(EEnemyState::EApproachState);
+	}
+}
+
+void AEnemyBase::AttackingState()
+{
+}
+
+void AEnemyBase::FarAttack()
+{
+	bAwaitingAttack, bIsAttackWaitTimeSet = false;
+
+	// Random Far Attack
+	if (FarAttackAnimations.IsValidIndex(FarAttackAnimations.Num() - 1))
+	{
+		int32 RandomIndex = FMath::RandRange(0, FarAttackAnimations.Num() - 1);
+		UAnimMontage* AttackAnim = FarAttackAnimations[RandomIndex]; // Get a random number from array
+
+		if (IsValid(AttackAnim))
+		{
+			GetMesh()->GetAnimInstance()->Montage_Play(AttackAnim);
+			bIsAttacking = true;
+		}
 	}
 }
 
 void AEnemyBase::CloseAttack()
 {
 	bAwaitingAttack, bIsAttackWaitTimeSet = false;
-	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, "Close Attack");
-}
 
-void AEnemyBase::FarAttack()
-{
-	bAwaitingAttack, bIsAttackWaitTimeSet = false;
-	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, "Far Attack");
+	// Random Close Attack
+	if (CloseAttackAnimations.IsValidIndex(CloseAttackAnimations.Num() - 1))
+	{
+		int32 RandomIndex = FMath::RandRange(0, CloseAttackAnimations.Num() - 1);
+		UAnimMontage* AttackAnim = CloseAttackAnimations[RandomIndex]; // Get a random number from array
+
+		if (IsValid(AttackAnim))
+		{
+			GetMesh()->GetAnimInstance()->Montage_Play(AttackAnim);
+			bIsAttacking = true;
+		}
+	}
 }
 
 #pragma endregion
@@ -298,6 +355,7 @@ void AEnemyBase::Stun()
 	{
 		// Stun
 		bIsStunned = true;
+		StopAttackTrace();
 
 		// Play SFX
 		UGameplayStatics::PlaySound2D(GetWorld(), StunSound);
@@ -311,8 +369,9 @@ void AEnemyBase::Stun()
 void AEnemyBase::EndStun()
 {
 	bIsStunned = false;
-
 	bHasDamagedPlayer = false;
+
+	SetState(EEnemyState::EApproachState);
 }
 
 #pragma endregion
