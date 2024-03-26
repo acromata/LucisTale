@@ -172,7 +172,6 @@ void AEnemyBase::Approach()
 	else
 	{
 		// Approach target
-		
 		if (IsValid(AIController) && !AIController->IsFollowingAPath())
 		{
 			AIController->MoveToActor(Target);
